@@ -27,8 +27,7 @@ async def chatgpt(message: types.Message):
     if dialogs.get(message.chat.id) is None:
         dialogs.update({message.chat.id: openai_core.Dialog(config)})
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    answer = dialogs.get(message.chat.id).get_answer(message)
-    await message.reply(answer)
+    await message.reply(dialogs.get(message.chat.id).get_answer(message))
 
 
 async def main() -> None:
@@ -36,5 +35,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v0.0.1 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v0.0.2 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
