@@ -55,5 +55,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v0.3 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v0.4 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
