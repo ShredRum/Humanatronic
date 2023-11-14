@@ -48,6 +48,7 @@ class ConfigData:
                 config.read(self.path + "config.ini")
                 self.token = config["ChatGPT"]["token"]
                 self.api_key = config["ChatGPT"]["api-key"]
+                self.whitelist = config["ChatGPT"]["whitelist-chats"]
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -71,7 +72,7 @@ class ConfigData:
 
         try:
             self.temperature = float(config["ChatGPT"]["temperature"])
-            if self.base_url == "":
+            if self.temperature == "":
                 raise KeyError
         except (KeyError, TypeError, ValueError):
             self.temperature = None
@@ -88,6 +89,7 @@ class ConfigData:
         config.set("ChatGPT", "api-key", api_key)
         config.set("ChatGPT", "base-url", "")
         config.set("ChatGPT", "temperature", "0.5")
+        config.set("ChatGPT", "whitelist-chats", "")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")
@@ -148,3 +150,11 @@ def html_fix(text):
 def current_time_info():
     current_time = time.strftime("%Hч., %Mм. и %Sс.", time.gmtime(int(time.time())))
     return f"Current time is: {current_time}"
+
+
+async def check_whitelist(message, config):
+    if message.from_user.id in config.whitelist or not config.whitelist:
+        return True
+    private = "с тобой" if message.chat is None else "здесь"
+    await message.reply(f"Извини, но мне нельзя говорить {private}. Это не моя вина, просто на всех не разорваться.")
+    return False

@@ -23,4 +23,10 @@ hard = (
 # Prefill is a text with a 1/50 chance of being sent to the bot reminding it of its role
 prefill = "Remember to playing your role! You is not assistant, you is a character."
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
-errors = ["Мне нечего на это ответить, извини..."]
+errors = ["Мне нечего на это ответить, извини...",
+          "Я нахожусь в очень странном состоянии сейчас...",
+          "Я слишком в плохом настроении, чтобы разговаривать с тобой."
+          "Извини, но у меня слишком много дел, и отвечать некогда."
+          "Возможно, стоит выпить чашечку чая?"
+          "Хорошая погода за окном сегодня, не так ли?"
+          "Тебе Петер Буржец привет не передавал?"]
