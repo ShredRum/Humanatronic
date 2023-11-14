@@ -53,6 +53,7 @@ class ConfigData:
                 self.api_key = config["ChatGPT"]["api-key"]
                 self.whitelist = config["ChatGPT"]["whitelist-chats"]
                 self.timezone = int(config["ChatGPT"]["timezone"])
+                self.unified_context = self.bool_init(config["ChatGPT"]["unified-context"])
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -95,6 +96,7 @@ class ConfigData:
         config.set("ChatGPT", "temperature", "0.5")
         config.set("ChatGPT", "whitelist-chats", "")
         config.set("ChatGPT", "timezone", "0")
+        config.set("ChatGPT", "unified-context", "false")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")
@@ -102,6 +104,15 @@ class ConfigData:
             print("ERR: Bot cannot write new config file and will close")
             logging.error(traceback.format_exc())
             sys.exit(1)
+
+    @staticmethod
+    def bool_init(var):
+        if var.lower() in ("false", "0"):
+            return False
+        elif var.lower() in ("true", "1"):
+            return True
+        else:
+            raise TypeError
 
 
 def check_names(message, bot_id):

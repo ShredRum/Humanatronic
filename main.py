@@ -1,10 +1,9 @@
 import asyncio
 import logging
+import time
 
 from aiogram import types, Bot, Dispatcher
 from aiogram.filters.command import Command
-
-
 import openai_core
 
 import utils
@@ -14,6 +13,20 @@ bot = Bot(token=config.token)
 dp = Dispatcher()
 
 dialogs = {}
+flood_wait = {}
+
+
+def is_flooded(message):
+    last_msg_time = flood_wait.get(message.from_user.id)
+    if last_msg_time is None:
+        flood_wait.update({message.from_user.id: int(time.time())})
+        return False
+    if int(time.time()) - last_msg_time <= 5:
+        logging.info(f"Rejected request from user {utils.username_parser(message)} "
+                     f"by floodwait. Retry after 5 seconds.")
+        return True
+    flood_wait.update({message.from_user.id: int(time.time())})
+    return False
 
 
 @dp.message(Command("start"))
@@ -27,13 +40,14 @@ async def start(message: types.Message):
 async def chatgpt(message: types.Message):
     if not await utils.check_whitelist(message, config):
         return
-    if dialogs.get(message.chat.id) is None:
-        dialogs.update({message.chat.id: openai_core.Dialog(config)})
-    if dialogs.get(message.chat.id).is_flooded(message):
+    context = message.chat.id if not config.unified_context else 0
+    if dialogs.get(context) is None:
+        dialogs.update({context: openai_core.Dialog(config)})
+    if is_flooded(message):
         return
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    await message.reply(dialogs.get(message.chat.id).get_answer(message, config))
+    await message.reply(dialogs.get(context).get_answer(message, config))
 
 
 async def main() -> None:
@@ -41,5 +55,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v0.2 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v0.3 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
