@@ -42,6 +42,6 @@ class Dialog:
             return random.choice(prompts.errors)
 
         answer = completion.choices[0].message.content
-        self.dialog_history.extend([{"role": "user", "content": f"{utils.username_parser(message)}: {message.text}"},
+        self.dialog_history.extend([{"role": "user", "content": prompt},
                                     {"role": "assistant", "content": str(answer)}])
         return answer
