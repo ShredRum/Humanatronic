@@ -1,6 +1,6 @@
 # Searches for these words in the message text and responds based on them.
-# It is recommended to be careful with names that are inflected or may appear as parts of words
-names = [" Нико ", " Niko "]
+# It is recommended to be careful with names that are inflected
+names = ["Нико", "Niko"]
 # Start prompt is a prompt that defines the main behavior of the bot before launching.
 start = ("You will play the role of the character Niko from the game OneShot. "
          "In this situation, we will assume that the character is female. "

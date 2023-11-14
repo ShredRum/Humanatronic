@@ -19,7 +19,7 @@ class Dialog:
                                     base_url=config.base_url)
 
     def get_answer(self, message):
-        chat_name = utils.username_parser(message) if message.chat is None else message.chat
+        chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
             prompt += f"{prompts.prefill}"

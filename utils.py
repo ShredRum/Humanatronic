@@ -1,10 +1,13 @@
 import configparser
 import logging
 import os
+import re
 import sys
 import time
 import traceback
 from importlib import reload
+
+from aiogram import types
 
 import prompts
 
@@ -113,7 +116,7 @@ def check_names(message, bot_id):
     if message.reply_to_message:
         if message.reply_to_message.from_user.id == bot_id:
             return True
-    msg_txt = message.text.lower()
+    msg_txt = re.sub(r'[^\w\s]', '', message.text.lower()).split()
     for name in prompts.names:
         if name.lower() in msg_txt:
             return True
@@ -152,9 +155,12 @@ def current_time_info():
     return f"Current time is: {current_time}"
 
 
-async def check_whitelist(message, config):
-    if message.from_user.id in config.whitelist or not config.whitelist:
-        return True
+async def check_whitelist(message: types.Message, config):
+    if str(message.chat.id) in config.whitelist or not config.whitelist:
+        return "True"
     private = "с тобой" if message.chat is None else "здесь"
+    # noinspection PyUnresolvedReferences
+    chat_name = username_parser(message) if message.chat.title is None else message.chat.title
+    logging.info(f"Rejected request from chat {chat_name}")
     await message.reply(f"Извини, но мне нельзя говорить {private}. Это не моя вина, просто на всех не разорваться.")
     return False
