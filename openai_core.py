@@ -15,19 +15,19 @@ class Dialog:
     def __init__(self, config):
         self.config = config
         self.dialog_history = [{"role": "system",
-                                "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info()}"}]
+                                "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info(config)}"}]
         self.client = openai.OpenAI(api_key=config.api_key,
                                     base_url=config.base_url)
         self.flood_wait = 0
 
-    def get_answer(self, message):
+    def get_answer(self, message, config):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
             prompt += f"{prompts.prefill}"
             logging.info(f"Prompt reminded for dialogue in chat {chat_name}")
         if random.randint(1, 30) == 1:
-            prompt += f"{utils.current_time_info()}"
+            prompt += f"{utils.current_time_info(config)}"
             logging.info(f"Time updated for dialogue in chat {chat_name}")
         prompt += f"{utils.username_parser(message)}: {message.text}"
         dialog_buffer = self.dialog_history.copy()

@@ -52,6 +52,7 @@ class ConfigData:
                 self.token = config["ChatGPT"]["token"]
                 self.api_key = config["ChatGPT"]["api-key"]
                 self.whitelist = config["ChatGPT"]["whitelist-chats"]
+                self.timezone = int(config["ChatGPT"]["timezone"])
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -93,6 +94,7 @@ class ConfigData:
         config.set("ChatGPT", "base-url", "")
         config.set("ChatGPT", "temperature", "0.5")
         config.set("ChatGPT", "whitelist-chats", "")
+        config.set("ChatGPT", "timezone", "0")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")
@@ -150,8 +152,8 @@ def html_fix(text):
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
-def current_time_info():
-    current_time = time.strftime("%Hч., %Mм. и %Sс.", time.gmtime(int(time.time())))
+def current_time_info(config):
+    current_time = time.strftime("%Hч., %Mм.", time.gmtime(int(time.time()) + config.timezone * 3600))
     return f"Current time is: {current_time}"
 
 

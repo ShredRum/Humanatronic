@@ -33,7 +33,7 @@ async def chatgpt(message: types.Message):
         return
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    await message.reply(dialogs.get(message.chat.id).get_answer(message))
+    await message.reply(dialogs.get(message.chat.id).get_answer(message, config))
 
 
 async def main() -> None:
