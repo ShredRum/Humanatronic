@@ -11,21 +11,26 @@ import utils
 
 class Dialog:
 
-    def __init__(self, config):
+    def __init__(self, config, sql_helper, context):
         self.config = config
-        self.dialog_history = [{"role": "system",
-                                "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info(config)}"}]
-        self.client = openai.OpenAI(api_key=config.api_key,
-                                    base_url=config.base_url)
+        self.sql_helper = sql_helper
+        self.context = context
+        dialog_history = sql_helper.dialog_get(context)
+        if not dialog_history:
+            self.dialog_history = [{"role": "system",
+                                    "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info(config)}"}]
+        else:
+            self.dialog_history = dialog_history
+        self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
 
-    def get_answer(self, message, config):
+    def get_answer(self, message):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
             prompt += f"{prompts.prefill}"
             logging.info(f"Prompt reminded for dialogue in chat {chat_name}")
         if random.randint(1, 30) == 1:
-            prompt += f"{utils.current_time_info(config)}"
+            prompt += f"{utils.current_time_info(self.config)}"
             logging.info(f"Time updated for dialogue in chat {chat_name}")
         prompt += f"{utils.username_parser(message)}: {message.text}"
         dialog_buffer = self.dialog_history.copy()
@@ -44,4 +49,5 @@ class Dialog:
         answer = completion.choices[0].message.content
         self.dialog_history.extend([{"role": "user", "content": prompt},
                                     {"role": "assistant", "content": str(answer)}])
+        self.sql_helper.dialog_update(self.context, self.dialog_history)
         return answer

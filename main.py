@@ -6,11 +6,13 @@ from aiogram import types, Bot, Dispatcher
 from aiogram.filters.command import Command
 
 import openai_core
+import sql_worker
 import utils
 
 config = utils.ConfigData()
 bot = Bot(token=config.token)
 dp = Dispatcher()
+sql_helper = sql_worker.SqlWorker(config.path + "database.db")
 
 dialogs = {}
 flood_wait = {}
@@ -42,12 +44,12 @@ async def chatgpt(message: types.Message):
         return
     context = message.chat.id if not config.unified_context else 0
     if dialogs.get(context) is None:
-        dialogs.update({context: openai_core.Dialog(config)})
+        dialogs.update({context: openai_core.Dialog(config, sql_helper, context)})
     if is_flooded(message):
         return
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    await message.reply(dialogs.get(context).get_answer(message, config))
+    await message.reply(dialogs.get(context).get_answer(message))
 
 
 async def main() -> None:
@@ -55,5 +57,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v0.4 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v0.5 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
