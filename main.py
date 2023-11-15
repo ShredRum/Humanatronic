@@ -4,8 +4,8 @@ import time
 
 from aiogram import types, Bot, Dispatcher
 from aiogram.filters.command import Command
-import openai_core
 
+import openai_core
 import utils
 
 config = utils.ConfigData()
