@@ -15,7 +15,12 @@ class Dialog:
         self.config = config
         self.sql_helper = sql_helper
         self.context = context
-        dialog_history = sql_helper.dialog_get(context)
+        try:
+            dialog_history = sql_helper.dialog_get(context)
+        except Exception as e:
+            dialog_history = []
+            logging.error("Humanotronic was unable to read conversation information! Please check your database!")
+            logging.error(f"{e}\n{traceback.print_exc()}")
         if not dialog_history:
             self.dialog_history = [{"role": "system",
                                     "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info(config)}"}]
@@ -49,5 +54,9 @@ class Dialog:
         answer = completion.choices[0].message.content
         self.dialog_history.extend([{"role": "user", "content": prompt},
                                     {"role": "assistant", "content": str(answer)}])
-        self.sql_helper.dialog_update(self.context, self.dialog_history)
+        try:
+            self.sql_helper.dialog_update(self.context, self.dialog_history)
+        except Exception as e:
+            logging.error("Humanotronic was unable to save conversation information! Please check your database!")
+            logging.error(f"{e}\n{traceback.print_exc()}")
         return answer
