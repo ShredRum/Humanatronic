@@ -40,7 +40,7 @@ class SqlWorker:
 
     @open_close_db
     def dialog_get(self, cursor, context):
-        cursor.execute("""SELECT * FROM chats WHERE meow = ?""", (context,))
+        cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
         dialog = cursor.fetchall()
         if dialog:
             dialog = json.loads(dialog[0][1])

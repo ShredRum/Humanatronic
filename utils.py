@@ -164,7 +164,7 @@ def html_fix(text):
 
 
 def current_time_info(config):
-    current_time = time.strftime("%Hч., %Mм.", time.gmtime(int(time.time()) + config.timezone * 3600))
+    current_time = time.strftime("%d.%m.%Y, %H:%M", time.gmtime(int(time.time()) + config.timezone * 3600))
     return f"Current time is: {current_time}"
 
 

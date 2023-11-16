@@ -20,7 +20,7 @@ class Dialog:
         except Exception as e:
             dialog_history = []
             logging.error("Humanotronic was unable to read conversation information! Please check your database!")
-            logging.error(f"{e}\n{traceback.print_exc()}")
+            logging.error(f"{e}\n{traceback.format_exc()}")
         if not dialog_history:
             self.dialog_history = [{"role": "system",
                                     "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info(config)}"}]
@@ -32,10 +32,10 @@ class Dialog:
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
-            prompt += f"{prompts.prefill}"
+            prompt += f"{prompts.prefill} "
             logging.info(f"Prompt reminded for dialogue in chat {chat_name}")
         if random.randint(1, 30) == 1:
-            prompt += f"{utils.current_time_info(self.config)}"
+            prompt += f"{utils.current_time_info(self.config)} "
             logging.info(f"Time updated for dialogue in chat {chat_name}")
         prompt += f"{utils.username_parser(message)}: {message.text}"
         dialog_buffer = self.dialog_history.copy()
