@@ -51,9 +51,11 @@ class ConfigData:
                 config.read(self.path + "config.ini")
                 self.token = config["ChatGPT"]["token"]
                 self.api_key = config["ChatGPT"]["api-key"]
+                self.model = config["ChatGPT"]["model"]
                 self.whitelist = config["ChatGPT"]["whitelist-chats"]
                 self.timezone = int(config["ChatGPT"]["timezone"])
                 self.unified_context = self.bool_init(config["ChatGPT"]["unified-context"])
+                self.summarizer_limit = int(config["ChatGPT"]["summarizer-limit"])
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -83,20 +85,27 @@ class ConfigData:
             self.temperature = None
 
     def remake_conf(self):
-        token, api_key = "", ""
+        token, api_key, model = "", "", ""
         while token == "":
             token = input("Please, write your bot token: ")
         while api_key == "":
             api_key = input("Please, write your OpenAI developer key: ")
+        while model == "":
+            model = input("Please, write your ChatGPT model name: ")
         config = configparser.ConfigParser()
         config.add_section("ChatGPT")
         config.set("ChatGPT", "token", token)
+        config.set("ChatGPT", "whitelist-chats", "")
+        config.set("ChatGPT", "unified-context", "false")
         config.set("ChatGPT", "api-key", api_key)
         config.set("ChatGPT", "base-url", "")
+        config.set("ChatGPT", "model", model)
         config.set("ChatGPT", "temperature", "0.5")
-        config.set("ChatGPT", "whitelist-chats", "")
         config.set("ChatGPT", "timezone", "0")
-        config.set("ChatGPT", "unified-context", "false")
+        if "gpt-4" in model or "16k" in model or "32k" in model:
+            config.set("ChatGPT", "summarizer-limit", "6000")
+        else:
+            config.set("ChatGPT", "summarizer-limit", "2500")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")
