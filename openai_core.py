@@ -139,7 +139,8 @@ class Dialog:
 
         compressed_dialogue = sys_prompt.copy()
         compressed_dialogue.extend(dialogue[:split:])
-        compressed_dialogue.append({"role": "user", "content": prompts.summarizer})
+        compressed_dialogue.append({"role": "user",
+                                    "content": f"{prompts.summarizer}\n{utils.current_time_info(self.config)}"})
         original_dialogue = dialogue[split::]
 
         completion = self.client.chat.completions.create(
