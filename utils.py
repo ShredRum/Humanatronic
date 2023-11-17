@@ -1,4 +1,5 @@
 import configparser
+import importlib
 import logging
 import os
 import re
@@ -8,8 +9,6 @@ import traceback
 from importlib import reload
 
 from aiogram import types
-
-import prompts
 
 
 class ConfigData:
@@ -40,6 +39,17 @@ class ConfigData:
             level=logging.INFO,
             format='%(asctime)s %(levelname)s: %(message)s',
             datefmt="%d-%m-%Y %H:%M:%S")
+
+        prompts_path = f"{self.path}prompts" if self.path else "prompts"
+        if not os.path.isfile(prompts_path) and self.path:
+            logging.warning(f"The prompts file was not found in the {self.path}, a generic prompt will be used!")
+            prompts_path = "prompts"
+        try:
+            self.prompts = importlib.import_module(prompts_path)
+        except Exception as e:
+            logging.error(f'Module prompts.py is invalid! {e}')
+            logging.error(traceback.format_exc())
+            sys.exit(1)
 
         if not os.path.isfile(self.path + "config.ini"):
             print("Config file isn't found! Trying to remake!")
@@ -124,11 +134,12 @@ class ConfigData:
             raise TypeError
 
 
-def check_names(message, bot_id):
+def check_names(message, bot_id, prompts):
     """
     The bot will only respond if called by name (if it's public chat)
     :param message:
     :param bot_id:
+    :param prompts:
     :return:
     """
     if message.text is None:

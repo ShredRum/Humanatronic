@@ -7,7 +7,6 @@ import traceback
 import openai
 import tiktoken
 
-import prompts
 import utils
 
 
@@ -26,7 +25,7 @@ class Dialog:
             logging.error(f"{e}\n{traceback.format_exc()}")
         if not dialog_history:
             self.dialog_history = [{"role": "system",
-                                    "content": f"{prompts.start}\n{prompts.hard}"
+                                    "content": f"{config.prompts.start}\n{config.prompts.hard}"
                                                f"\n{utils.current_time_info(config).split(maxsplit=2)[2]} - "
                                                f"it's time for you to meet"}]
         else:
@@ -37,7 +36,7 @@ class Dialog:
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
-            prompt += f"{prompts.prefill} "
+            prompt += f"{self.config.prompts.prefill} "
             logging.info(f"Prompt reminded for dialogue in chat {chat_name}")
         if random.randint(1, 30) == 1:
             prompt += f"{utils.current_time_info(self.config)} "
@@ -54,7 +53,7 @@ class Dialog:
                 stream=False)
         except Exception as e:
             logging.error(f"{e}\n{traceback.format_exc()}")
-            return random.choice(prompts.errors)
+            return random.choice(self.config.prompts.errors)
 
         answer = completion.choices[0].message.content
         await message.reply(answer)
@@ -141,7 +140,7 @@ class Dialog:
         compressed_dialogue = sys_prompt.copy()
         compressed_dialogue.extend(dialogue[:split:])
         compressed_dialogue.append({"role": "user",
-                                    "content": f"{prompts.summarizer}"
+                                    "content": f"{self.config.prompts.summarizer}"
                                                f"\n{utils.current_time_info(self.config)}"})
         original_dialogue = dialogue[split::]
 

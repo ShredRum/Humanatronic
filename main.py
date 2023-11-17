@@ -38,7 +38,7 @@ async def start(message: types.Message):
     await message.reply("Я не бот, я живой человек! Не забывай об этом во время разговора со мной!")
 
 
-@dp.message(lambda message: utils.check_names(message, config.my_id))
+@dp.message(lambda message: utils.check_names(message, config.my_id, config.prompts))
 async def chatgpt(message: types.Message):
     if not await utils.check_whitelist(message, config):
         return
@@ -57,5 +57,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v1.0.2 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v1.1 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
