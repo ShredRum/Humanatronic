@@ -31,7 +31,7 @@ class Editor:
 
     def __init__(self):
         while True:
-            self.path = input("Please enter path to your database.db file "
+            self.path = input("Please enter path to your database.db folder "
                               "(leave blank to search the current directory): ")
             if self.path:
                 self.path = f"{self.path}/"
