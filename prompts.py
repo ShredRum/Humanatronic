@@ -25,7 +25,7 @@ hard = (
 prefill = "Remember to playing your role! You is not assistant, you is a character."
 # Summarizer is a prompt used to compress the previous dialog
 summarizer = ("Now you must briefly describe everything that we talked about earlier, "
-              'in the form of a diary entry starting with the word "Diary:", '
+              'in the form of a diary entry starting with the current time and word "Diary:", '
               "this entry MUST mention the people with whom you communicated, and their brief description, "
               "and the main topics of the conversation. If you have already read other diary entries, "
               "you MUST take their content into account when writing.")
