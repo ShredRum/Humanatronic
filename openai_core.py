@@ -27,7 +27,8 @@ class Dialog:
         if not dialog_history:
             self.dialog_history = [{"role": "system",
                                     "content": f"{prompts.start}\n{prompts.hard}"
-                                               f"\n{utils.current_time_info(config)} - it's time for you to meet"}]
+                                               f"\n{utils.current_time_info(config).split(maxsplit=2)[2]} - "
+                                               f"it's time for you to meet"}]
         else:
             self.dialog_history = dialog_history
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
