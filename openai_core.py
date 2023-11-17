@@ -1,9 +1,11 @@
 # from dotenv import load_dotenv
 import logging
 import random
+import time
 import traceback
 
 import openai
+import tiktoken
 
 import prompts
 import utils
@@ -12,6 +14,7 @@ import utils
 class Dialog:
 
     def __init__(self, config, sql_helper, context):
+        self.dialogue_locker = False
         self.config = config
         self.sql_helper = sql_helper
         self.context = context
@@ -28,7 +31,7 @@ class Dialog:
             self.dialog_history = dialog_history
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
 
-    def get_answer(self, message):
+    async def get_answer(self, message):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
@@ -52,14 +55,26 @@ class Dialog:
             return random.choice(prompts.errors)
 
         answer = completion.choices[0].message.content
-        self.dialog_history.extend([{"role": "user", "content": prompt},
-                                    {"role": "assistant", "content": str(answer)}])
-        # print(f"{self.num_tokens_from_messages()} prompt tokens counted by num_tokens_from_messages().")
-        # print(f'{completion["usage"]["prompt_tokens"]} prompt tokens counted by the OpenAI API.')
+        await message.reply(answer)
         total_tokens = completion.usage.total_tokens
         logging.info(f'{total_tokens} tokens counted by the OpenAI API in chat {chat_name}.')
+        while self.dialogue_locker is True:
+            logging.info(f"Adding messages is blocked for chat {chat_name} "
+                         f"due to the work of the summarizer. Retry after 5s.")
+            time.sleep(5)
+        self.dialog_history.extend([{"role": "user", "content": prompt},
+                                    {"role": "assistant", "content": str(answer)}])
         if total_tokens >= self.config.summarizer_limit:
-            self.summarizer()
+            logging.info(f"The token limit {self.config.summarizer_limit} for "
+                         f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
+            try:
+                self.dialogue_locker = True
+                self.summarizer(chat_name)
+            except Exception as e:
+                logging.error("Error using summarizer! The dialogue has not been optimized!")
+                logging.error(f"{e}\n{traceback.format_exc()}")
+            finally:
+                self.dialogue_locker = False
         try:
             self.sql_helper.dialog_update(self.context, self.dialog_history)
         except Exception as e:
@@ -67,51 +82,76 @@ class Dialog:
             logging.error(f"{e}\n{traceback.print_exc()}")
         return answer
 
-    def summarizer(self):
-        pass
+    def summarizer(self, chat_name):
+        sys_prompt = self.dialog_history[:1:]
+        dialogue = self.dialog_history[1::]
+        model = self.config.model
+        tokens_per_message = 3
+        tokens_per_name = 1
+        if model == "gpt-3.5-turbo-0301":
+            tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
+            tokens_per_name = -1  # if there's a name, the role is omitted
+        if model in {
+            "gpt-3.5-turbo-0613",
+            "gpt-3.5-turbo-16k-0613",
+            "gpt-4-0314",
+            "gpt-4-32k-0314",
+            "gpt-4-0613",
+            "gpt-4-32k-0613",
+            "gpt-3.5-turbo-0301"
+        }:
+            pass
+        elif "gpt-3.5-turbo" in model:
+            logging.warning("GPT-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
+            model = "gpt-3.5-turbo-0613"
+        elif "gpt-4" in model:
+            logging.warning("GPT-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+            model = "gpt-4-0613"
+        else:
+            raise NotImplementedError(
+                f"""Summarizer is not implemented for model {model}.
+                See https://github.com/openai/openai-python/blob/main/chatml.md
+                for information on how messages are converted to tokens."""
+            )
 
-    # def num_tokens_from_messages(self, model=None):
-    #     """Official example from the OpenAI website.
-    #     Return the number of tokens used by a list of messages."""
-    #
-    #     model = model or self.config.model
-    #     print(model)
-    #     try:
-    #         encoding = tiktoken.encoding_for_model(model)
-    #     except KeyError:
-    #         print("Warning: model not found. Using cl100k_base encoding.")
-    #         encoding = tiktoken.get_encoding("cl100k_base")
-    #     if model in {
-    #         "gpt-3.5-turbo-0613",
-    #         "gpt-3.5-turbo-16k-0613",
-    #         "gpt-4-0314",
-    #         "gpt-4-32k-0314",
-    #         "gpt-4-0613",
-    #         "gpt-4-32k-0613",
-    #     }:
-    #         tokens_per_message = 3
-    #         tokens_per_name = 1
-    #     elif model == "gpt-3.5-turbo-0301":
-    #         tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
-    #         tokens_per_name = -1  # if there's a name, the role is omitted
-    #     elif "gpt-3.5-turbo" in model:
-    #         print("Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
-    #         return self.num_tokens_from_messages("gpt-3.5-turbo-0613")
-    #     elif "gpt-4" in model:
-    #         print("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
-    #         return self.num_tokens_from_messages("gpt-4-0613")
-    #     else:
-    #         raise NotImplementedError(
-    #             f"""num_tokens_from_messages() is not implemented for model {model}.
-    #             See https://github.com/openai/openai-python/blob/main/chatml.md
-    #             for information on how messages are converted to tokens."""
-    #         )
-    #     num_tokens = 0
-    #     for message in self.dialog_history:
-    #         num_tokens += tokens_per_message
-    #         for key, value in message.items():
-    #             num_tokens += len(encoding.encode(value))
-    #             if key == "name":
-    #                 num_tokens += tokens_per_name
-    #     num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
-    #     return num_tokens
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+        except KeyError:
+            print("Warning: model not found. Using cl100k_base encoding.")
+            encoding = tiktoken.get_encoding("cl100k_base")
+
+        compression_limit = int(self.config.summarizer_limit * 0.8)
+        compression_limit_count = 0
+        split = 0
+        for message in dialogue:
+            compression_limit_count += tokens_per_message
+            for key, value in message.items():
+                compression_limit_count += len(encoding.encode(value))
+                if key == "name":
+                    compression_limit_count += tokens_per_name
+            split += 1
+            if compression_limit_count >= compression_limit:
+                break
+
+        if dialogue[split]['role'] == 'assistant':
+            split += 1  # We do not separate the dialogue between the assistant and the user
+
+        compressed_dialogue = sys_prompt.copy()
+        compressed_dialogue.extend(dialogue[:split:])
+        compressed_dialogue.append({"role": "user", "content": prompts.summarizer})
+        original_dialogue = dialogue[split::]
+
+        completion = self.client.chat.completions.create(
+            model=model,
+            messages=compressed_dialogue,
+            temperature=self.config.temperature,
+            max_tokens=4096,
+            stream=False)
+
+        answer = completion.choices[0].message.content
+        logging.info(f"Summarizing completed for chat {chat_name}")
+        result = sys_prompt
+        result.append({"role": "assistant", "content": answer})
+        result.extend(original_dialogue)
+        result.append({"role": "user", "content": utils.current_time_info(self.config)})
+        self.dialog_history = result

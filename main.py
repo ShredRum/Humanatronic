@@ -49,7 +49,7 @@ async def chatgpt(message: types.Message):
         return
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    await message.reply(dialogs.get(context).get_answer(message))
+    await dialogs.get(context).get_answer(message)
 
 
 async def main() -> None:
@@ -57,5 +57,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v0.7 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v1.0 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
