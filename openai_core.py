@@ -26,8 +26,7 @@ class Dialog:
             logging.error(f"{e}\n{traceback.format_exc()}")
         if not dialog_history:
             self.dialog_history = [{"role": "system",
-                                    "content": f"{prompts.start}\n{prompts.hard}"}]
-            self.dialog_history.append({"role": "user", "content": utils.current_time_info(config)})
+                                    "content": f"{prompts.start}\n{prompts.hard}\n{utils.current_time_info(config)}"}]
         else:
             self.dialog_history = dialog_history
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
