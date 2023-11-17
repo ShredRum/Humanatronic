@@ -41,7 +41,7 @@ class ConfigData:
             datefmt="%d-%m-%Y %H:%M:%S")
 
         prompts_path = f"{self.path}prompts" if self.path else "prompts"
-        if not os.path.isfile(prompts_path) and self.path:
+        if not os.path.isfile(f"{prompts_path}.py") and self.path:
             logging.warning(f"The prompts file was not found in the {self.path}, a generic prompt will be used!")
             prompts_path = "prompts"
         try:
