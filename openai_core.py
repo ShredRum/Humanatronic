@@ -85,7 +85,13 @@ class Dialog:
 
     def summarizer(self, chat_name):
         sys_prompt = self.dialog_history[:1:]
-        dialogue = self.dialog_history[1::]
+        if self.dialog_history[1]['role'] == 'assistant':
+            # The dialogue cannot begin with the words of the assistant, which means it was a diary entry
+            last_diary = self.dialog_history[1]
+            dialogue = self.dialog_history[2::]
+        else:
+            last_diary = None
+            dialogue = self.dialog_history[1::]
         model = self.config.model
         tokens_per_message = 3
         tokens_per_name = 1
@@ -139,6 +145,8 @@ class Dialog:
 
         compressed_dialogue = sys_prompt.copy()
         compressed_dialogue.extend(dialogue[:split:])
+        if last_diary is not None:
+            compressed_dialogue.append(last_diary)
         compressed_dialogue.append({"role": "user",
                                     "content": f"{self.config.prompts.summarizer}"
                                                f"\n{utils.current_time_info(self.config)}"})
