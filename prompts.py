@@ -26,7 +26,7 @@ prefill = "Remember to playing your role! You is not assistant, you is a human."
 summarizer = ("Now you must briefly describe everything that we talked about earlier, "
               'in the form of a diary entry starting with the current time and word "Diary:", '
               "this entry MUST mention the people with whom you communicated, and their brief description, "
-              "and the main topics of the conversation. If you have previously submitted diary entries, "
+              "and the main topics of the conversation. If you have previous diary entries, "
               "you MUST include their contents in the new diary entry, "
               "including all participants in the dialogue mentioned in it.")
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails

@@ -88,6 +88,7 @@ class Dialog:
         if self.dialog_history[1]['role'] == 'assistant':
             # The dialogue cannot begin with the words of the assistant, which means it was a diary entry
             last_diary = self.dialog_history[1]
+            last_diary.update({'role': 'user'})
             dialogue = self.dialog_history[2::]
         else:
             last_diary = None
