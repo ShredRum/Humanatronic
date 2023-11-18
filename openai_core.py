@@ -87,8 +87,7 @@ class Dialog:
         sys_prompt = self.dialog_history[:1:]
         if self.dialog_history[1]['role'] == 'assistant':
             # The dialogue cannot begin with the words of the assistant, which means it was a diary entry
-            last_diary = self.dialog_history[1]
-            last_diary.update({'role': 'user'})
+            last_diary = self.dialog_history[1]['content']
             dialogue = self.dialog_history[2::]
         else:
             last_diary = None
@@ -146,11 +145,13 @@ class Dialog:
 
         compressed_dialogue = sys_prompt.copy()
         compressed_dialogue.extend(dialogue[:split:])
+        summarizer_text = self.config.prompts.summarizer
         if last_diary is not None:
-            compressed_dialogue.append(last_diary)
-        compressed_dialogue.append({"role": "user",
-                                    "content": f"{self.config.prompts.summarizer}"
-                                               f"\n{utils.current_time_info(self.config)}"})
+            summarizer_text += ("The text below contains your previous diary entry. "
+                                "You MUST use the facts from this entry when writing your new entry.\n"
+                                f"{last_diary}")
+        summarizer_text += f"\n{utils.current_time_info(self.config)}"
+        compressed_dialogue.append({"role": "user", "content": summarizer_text})
         original_dialogue = dialogue[split::]
 
         completion = self.client.chat.completions.create(
