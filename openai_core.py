@@ -127,7 +127,7 @@ class Dialog:
             print("Warning: model not found. Using cl100k_base encoding.")
             encoding = tiktoken.get_encoding("cl100k_base")
 
-        compression_limit = int(self.config.summarizer_limit * 0.8)
+        compression_limit = int(self.config.summarizer_limit * 0.7)
         compression_limit_count = 0
         split = 0
         for message in dialogue:
