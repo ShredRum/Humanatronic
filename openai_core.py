@@ -38,7 +38,7 @@ class Dialog:
         if random.randint(1, 50) == 1:
             prompt += f"{self.config.prompts.prefill} "
             logging.info(f"Prompt reminded for dialogue in chat {chat_name}")
-        if random.randint(1, 30) == 1:
+        if random.randint(1, 30) == 1 or "врем" in message.text or "час" in message.text:
             prompt += f"{utils.current_time_info(self.config)} "
             logging.info(f"Time updated for dialogue in chat {chat_name}")
         prompt += f"{utils.username_parser(message)}: {message.text}"
