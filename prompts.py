@@ -31,7 +31,7 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
               '(height, appearance, profession, interests, smartphone/PC model, etc. '
               '3. A list of people with whom you have communicated previously, '
               'the events in their lives that they talk about, their profession, interests, etc., '
-              'as well as the topics that you talked about.')
+              'as well as the topics that you talked about. Write in English.')
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",
