@@ -35,10 +35,9 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
 summarizer_last = ("The text below contains your previous memory dump entry. "
                    "You MUST use the facts from this entry when writing your new entry. "
                    "From the text below you MUST save information about your "
-                   "personal characteristics and ALL people with whom you spoke; "
-                   "topics of conversation and events have a lower priority. "
-                   "Minor topics of conversation should be reduced or discarded "
-                   "if result is longer than 1500 characters.")
+                   "personal characteristics and ALL people mentioned there; "
+                   "The result MUST not exceed 1500 characters! Minor topics of conversation or "
+                   "events must be reduced or discarded if the limit is exceeded.")
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",
