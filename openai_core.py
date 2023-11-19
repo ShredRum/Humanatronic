@@ -148,7 +148,10 @@ class Dialog:
         summarizer_text = self.config.prompts.summarizer
         if last_diary is not None:
             summarizer_text += ("The text below contains your previous diary entry. "
-                                "You MUST use the facts from this entry when writing your new entry.\n"
+                                "You MUST use the facts from this entry when writing your new entry. "
+                                "From the text below you MUST save information about your "
+                                "personal characteristics and descriptions of the people with whom you spoke; "
+                                "topics of conversation have a lower priority.\n"
                                 f"{last_diary}")
         summarizer_text += f"\n{utils.current_time_info(self.config)}"
         compressed_dialogue.append({"role": "user", "content": summarizer_text})

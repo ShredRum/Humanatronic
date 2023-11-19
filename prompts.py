@@ -25,13 +25,13 @@ hard = (
 # Prefill is a text with a 1/50 chance of being sent to the bot reminding it of its role
 prefill = "Remember to playing your role! You is not assistant, you is a human."
 # Summarizer is a prompt used to compress the previous dialog
-summarizer = ("Now you must briefly describe everything that we talked about earlier, "
-              'in the form of a diary entry starting with the current time and word "Diary:", '
-              "this entry MUST mention the people with whom you communicated, and their brief description, "
-              "and the main topics of the conversation. You SHOULD also write down the details of your life "
-              "that were mentioned in the dialogue. If you have previous diary entries, "
-              "you MUST include their contents in the new diary entry, "
-              "including all participants in the dialogue mentioned in it.")
+summarizer = ('Now you must create a “memory dump” - a text that will help you save information about '
+              'your conversation. Text structure: 1. Heading "Memory dump" and current time. '
+              '2. Your personal characteristics, which are mentioned in this dialogue '
+              '(height, appearance, profession, interests, smartphone/PC model, etc. '
+              '3. A list of people with whom you have communicated previously, '
+              'the events in their lives that they talk about, their profession, interests, etc., '
+              'as well as the topics that you talked about.')
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",
