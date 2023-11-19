@@ -78,7 +78,7 @@ class Editor:
 
     def conversation_worker(self, conversation):
         incorrect = False
-        commands = ['read', 'edit', 'update', 'clear']
+        commands = ['read', 'edit', 'copy', 'update', 'clear']
         while True:
             if not incorrect:
                 print(f"\nConversation {conversation} selected")
@@ -94,6 +94,8 @@ class Editor:
                 self.conversation_read(conversation)
             elif choice == 'edit':
                 self.conversation_edit(conversation)
+            elif choice == 'copy':
+                self.conversation_copy(conversation)
             elif choice == 'update':
                 self.conversation_update(conversation)
             elif choice == 'clear':
@@ -112,7 +114,7 @@ class Editor:
         finally:
             print("*" * 10)
 
-    def conversation_edit(self, conversation):
+    def conversation_copy(self, conversation):
         file_buffer = ""
         try:
             conversation_text = json.loads(self.read_conversation(conversation)[0][0])
@@ -120,23 +122,32 @@ class Editor:
                 file_buffer += f"[{tuple(conversation_piece.values())[0]}: {tuple(conversation_piece.values())[1]}]\n"
         except Exception as e:
             print(f"{e}/{traceback.format_exc()}")
-            return
+            return False
         file_path = f"{self.path}{conversation}.txt"
         if os.path.isfile(file_path):
             while True:
                 choice = input("The file already exists! Do you want to overwrite it, "
                                "losing the data stored there? (Y/n): ").lower()
                 if choice == "n":
-                    return
+                    return False
                 elif choice in ("", "y"):
                     break
         try:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.write(file_buffer)
+                print(f"\nSuccessfully written {file_path}")
+                return True
         except Exception as e:
             print("Error writing information to txt file!")
             print(f"{e}/{traceback.format_exc()}")
+            return False
+
+    def conversation_edit(self, conversation):
+
+        if not self.conversation_copy(conversation):
             return
+
+        file_path = f"{self.path}{conversation}.txt"
 
         try:
             if sys.platform.startswith('darwin'):
@@ -153,8 +164,6 @@ class Editor:
         except Exception as e:
             print(f"Error opening file {file_path}. You can open it in a text editor yourself.")
             print(f"{e}/{traceback.format_exc()}")
-
-        print(f"\nSuccessfully written {file_path}")
 
     def conversation_update(self, conversation):
         file_path = f"{self.path}{conversation}.txt"
@@ -265,6 +274,6 @@ class Editor:
 
 
 if __name__ == "__main__":
-    print("###HUMANOTRONIC DB EDITOR v0.1 LAUNCHED SUCCESSFULLY###")
+    print("###HUMANOTRONIC DB EDITOR v0.2 LAUNCHED SUCCESSFULLY###")
     while True:
         Editor()
