@@ -7,7 +7,6 @@ import traceback
 import openai
 import tiktoken
 
-import prompts
 import utils
 
 
@@ -86,12 +85,13 @@ class Dialog:
 
     def summarizer(self, chat_name):
         sys_prompt = self.dialog_history[:1:]
-        dialogue = self.dialog_history[1::]
         if self.dialog_history[1]['role'] == 'assistant':
             # The dialogue cannot begin with the words of the assistant, which means it was a diary entry
             last_diary = self.dialog_history[1]['content']
+            dialogue = self.dialog_history[2::]
         else:
             last_diary = None
+            dialogue = self.dialog_history[1::]
         model = self.config.model
         tokens_per_message = 3
         tokens_per_name = 1
@@ -143,13 +143,18 @@ class Dialog:
         if dialogue[split]['role'] == 'assistant':
             split += 1  # We do not separate the dialogue between the assistant and the user
 
-        compressed_dialogue = sys_prompt.copy()
-        compressed_dialogue.extend(dialogue[:split:])
         summarizer_text = self.config.prompts.summarizer
         if last_diary is not None:
-            summarizer_text += f"\n{prompts.summarizer_last}\n{last_diary}"
-        summarizer_text += f"\n{utils.current_time_info(self.config)}"
-        compressed_dialogue.append({"role": "user", "content": summarizer_text})
+            summarizer_text += f"\n{self.config.prompts.summarizer_last}"
+        compressed_dialogue = [{'role': 'system', "content": summarizer_text}]
+        if last_diary is None:
+            compressed_dialogue.extend(sys_prompt)
+            compressed_dialogue[1].update({'role': 'user'})
+            compressed_dialogue.extend(dialogue[:split:])
+        else:
+            compressed_dialogue.extend(dialogue[:split:])
+            compressed_dialogue.append({"role": "user", "content": last_diary})
+        compressed_dialogue.append({"role": "user", "content": utils.current_time_info(self.config)})
         original_dialogue = dialogue[split::]
 
         completion = self.client.chat.completions.create(

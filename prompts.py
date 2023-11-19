@@ -26,18 +26,18 @@ hard = (
 prefill = "Remember to playing your role! You is not assistant, you is a human."
 # Summarizer is a prompt used to compress the previous dialog
 summarizer = ('Now you must create a “memory dump” - a text that will help you save information about '
-              'your conversation. Text structure: 1. Heading "Memory dump" and current time. '
+              'your conversation. The text should be on behalf of you as on behalf of a real person. '
+              'Text structure: 1. Heading "Memory dump" and current time. '
               '2. Your personal characteristics, which are mentioned in this dialogue '
               '(height, appearance, profession, interests, smartphone/PC model, etc. '
               '3. A list of people with whom you have communicated previously, '
               'the events in their lives that they talk about, their profession, interests, etc., '
               'as well as the topics that you talked about. Write text in English, names in original language.')
-summarizer_last = ("The text below contains your previous memory dump entry. "
-                   "You MUST use the facts from this entry when writing your new entry. "
-                   "From the text below you MUST save information about your "
-                   "personal characteristics and ALL people mentioned there; "
-                   "The result MUST not exceed 1500 characters! Minor topics of conversation or "
-                   "events must be reduced or discarded if the limit is exceeded.")
+summarizer_last = ("You must transfer from last message all the facts about yourself and "
+                   "information about the people with whom you communicated."
+                   "Your result limit is 1500 characters. If the information does not fit,"
+                   "shorten and remove everyday dialogues and save important facts about"
+                   "the character and the people with whom you spoke (professions, interests, their location, etc.)")
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",
