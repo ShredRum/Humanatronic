@@ -151,7 +151,9 @@ class Dialog:
                                 "You MUST use the facts from this entry when writing your new entry. "
                                 "From the text below you MUST save information about your "
                                 "personal characteristics and descriptions of the people with whom you spoke; "
-                                "topics of conversation have a lower priority.\n"
+                                "topics of conversation have a lower priority. "
+                                "Minor events (but not characteristics) can be discarded "
+                                "if the entry is longer than 1500 characters.\n"
                                 f"{last_diary}")
         summarizer_text += f"\n{utils.current_time_info(self.config)}"
         compressed_dialogue.append({"role": "user", "content": summarizer_text})
