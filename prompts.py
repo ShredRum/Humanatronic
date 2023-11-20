@@ -32,7 +32,8 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
               '(height, appearance, profession, interests, smartphone/PC model, etc. '
               '3. A list of people with whom you have communicated previously, '
               'the events in their lives that they talk about, their profession, interests, etc., '
-              'as well as the topics that you talked about. Write text in English, names in original language.')
+              'as well as the topics that you talked about. Write text in English. '
+              'Do not translate the names of people and animals into English.')
 summarizer_last = ("You must transfer from last message all the facts about yourself and "
                    "information about the people with whom you communicated."
                    "Your result limit is 1500 characters. If the information does not fit,"
