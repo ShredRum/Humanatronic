@@ -1,4 +1,5 @@
 # from dotenv import load_dotenv
+import json
 import logging
 import random
 import time
@@ -18,18 +19,25 @@ class Dialog:
         self.sql_helper = sql_helper
         self.context = context
         try:
-            dialog_history = sql_helper.dialog_get(context)
+            dialog_data = sql_helper.dialog_get(context)
         except Exception as e:
-            dialog_history = []
+            dialog_data = []
             logging.error("Humanotronic was unable to read conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
-        if not dialog_history:
-            self.dialog_history = [{"role": "system",
-                                    "content": f"{config.prompts.start}\n{config.prompts.hard}"
-                                               f"\n{utils.current_time_info(config).split(maxsplit=2)[2]} - "
-                                               f"it's time to start our conversation"}]
+        if not dialog_data:
+            start_time = f"{utils.current_time_info(config).split(maxsplit=2)[2]} - it's time to start our conversation"
+            dialog_history = []
         else:
-            self.dialog_history = dialog_history
+            dialog_history = json.loads(dialog_data[0][1])
+            start_time = (f"{utils.current_time_info(config, dialog_data[0][2]).split(maxsplit=2)[2]} - "
+                          f"it's time to start our conversation")
+            # Backward compatibility
+            if dialog_history[0]['role'] == 'system':
+                dialog_history = dialog_history[1::]
+        self.dialog_history = [{"role": "system",
+                                "content": f"{config.prompts.start}\n{config.prompts.hard}\n{start_time}"}]
+        if dialog_history:
+            self.dialog_history.extend(dialog_history)
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
 
     async def get_answer(self, message):
@@ -49,7 +57,7 @@ class Dialog:
                 model=self.config.model,
                 messages=dialog_buffer,
                 temperature=self.config.temperature,
-                max_tokens=4096,
+                max_tokens=self.config.tokens_per_answer,
                 stream=False)
         except Exception as e:
             logging.error(f"{e}\n{traceback.format_exc()}")
@@ -78,10 +86,10 @@ class Dialog:
             finally:
                 self.dialogue_locker = False
         try:
-            self.sql_helper.dialog_update(self.context, self.dialog_history)
+            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history[1::]))
         except Exception as e:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
-            logging.error(f"{e}\n{traceback.print_exc()}")
+            logging.error(f"{e}\n{traceback.format_exc()}")
         return answer
 
     def summarizer(self, chat_name):
@@ -147,6 +155,7 @@ class Dialog:
         summarizer_text = self.config.prompts.summarizer
         if last_diary is not None:
             summarizer_text += f"\n{self.config.prompts.summarizer_last}"
+        summarizer_text = summarizer_text.format(self.config.memory_dump_size)
         compressed_dialogue = [{'role': 'system', "content": summarizer_text}]
         if last_diary is None:
             compressed_dialogue.extend(sys_prompt)
@@ -162,11 +171,11 @@ class Dialog:
             model=model,
             messages=compressed_dialogue,
             temperature=self.config.temperature,
-            max_tokens=4096,
+            max_tokens=self.config.tokens_per_answer,
             stream=False)
 
         answer = completion.choices[0].message.content
-        logging.info(f"Summarizing completed for chat {chat_name}")
+        logging.info(f"Summarizing completed for chat {chat_name}, {completion.usage.total_tokens} tokens were used")
         result = sys_prompt
         result.append({"role": "assistant", "content": answer})
         result.extend(original_dialogue)

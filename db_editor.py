@@ -3,6 +3,7 @@ import os.path
 import sqlite3
 import subprocess
 import sys
+import time
 import traceback
 
 
@@ -202,6 +203,9 @@ class Editor:
             else:
                 sym_buffer += sym
 
+        if nesting != 0:
+            print("Error parsing text file! Invalid nesting!")
+            return
         result = []
         for str_buffer in text_buffer:
             split_str = str_buffer.split(sep=": ", maxsplit=1)
@@ -266,14 +270,14 @@ class Editor:
             sql_wrapper.cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
             record = sql_wrapper.cursor.fetchall()
             if not record:
-                sql_wrapper.cursor.execute("""INSERT INTO chats VALUES (?,?);""",
-                                           (context, json.dumps(dialog_text)))
+                sql_wrapper.cursor.execute("""INSERT INTO chats VALUES (?,?,?);""",
+                                           (context, json.dumps(dialog_text), int(time.time())))
             else:
                 sql_wrapper.cursor.execute("""UPDATE chats SET dialog_text = ? WHERE context = ?""",
                                            (json.dumps(dialog_text), context))
 
 
 if __name__ == "__main__":
-    print("###HUMANOTRONIC DB EDITOR v0.2 LAUNCHED SUCCESSFULLY###")
+    print("###HUMANOTRONIC DB EDITOR v0.3 LAUNCHED SUCCESSFULLY###")
     while True:
         Editor()

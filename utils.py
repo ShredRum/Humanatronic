@@ -12,7 +12,6 @@ from aiogram import types
 
 
 class ConfigData:
-
     path = ""
     my_id = ""
 
@@ -66,6 +65,8 @@ class ConfigData:
                 self.timezone = int(config["ChatGPT"]["timezone"])
                 self.unified_context = self.bool_init(config["ChatGPT"]["unified-context"])
                 self.summarizer_limit = int(config["ChatGPT"]["summarizer-limit"])
+                self.tokens_per_answer = int(config["ChatGPT"]["tokens-per-answer"])
+                self.memory_dump_size = int(config["ChatGPT"]["memory-dump-size"])
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -114,8 +115,12 @@ class ConfigData:
         config.set("ChatGPT", "timezone", "0")
         if "gpt-4" in model or "16k" in model or "32k" in model:
             config.set("ChatGPT", "summarizer-limit", "6000")
+            config.set("ChatGPT", "tokens-per-answer", "2000")
+            config.set("ChatGPT", "memory-dump-size", "2000")
         else:
             config.set("ChatGPT", "summarizer-limit", "2500")
+            config.set("ChatGPT", "tokens-per-answer", "1000")
+            config.set("ChatGPT", "memory-dump-size", "1000")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")
@@ -183,8 +188,10 @@ def html_fix(text):
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
-def current_time_info(config):
-    current_time = time.strftime("%d.%m.%Y, %a, %H:%M", time.gmtime(int(time.time()) + config.timezone * 3600))
+def current_time_info(config, int_time: int = None):
+    if not int_time:
+        int_time = int(time.time())
+    current_time = time.strftime("%d.%m.%Y, %a, %H:%M", time.gmtime(int_time + config.timezone * 3600))
     return f"Current time: {current_time}"
 
 
