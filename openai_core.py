@@ -53,7 +53,8 @@ class Dialog:
                 stream=False)
         except Exception as e:
             logging.error(f"{e}\n{traceback.format_exc()}")
-            return random.choice(self.config.prompts.errors)
+            await message.reply(random.choice(self.config.prompts.errors))
+            return
 
         answer = completion.choices[0].message.content
         await message.reply(answer)
