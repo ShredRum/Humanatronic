@@ -55,6 +55,12 @@ class Dialog:
         if reply_msg:
             dialog_buffer.append(reply_msg)
         dialog_buffer.append({"role": "user", "content": prompt})
+        summarizer_used = False
+        while self.dialogue_locker is True:
+            summarizer_used = True
+            logging.info(f"Adding messages is blocked for chat {chat_name} "
+                         f"due to the work of the summarizer. Retry after 5s.")
+            time.sleep(5)
         try:
             completion = self.client.chat.completions.create(
                 model=self.config.model,
@@ -70,6 +76,7 @@ class Dialog:
         total_tokens = completion.usage.total_tokens
         logging.info(f'{total_tokens} tokens counted by the OpenAI API in chat {chat_name}.')
         while self.dialogue_locker is True:
+            summarizer_used = True
             logging.info(f"Adding messages is blocked for chat {chat_name} "
                          f"due to the work of the summarizer. Retry after 5s.")
             time.sleep(5)
@@ -77,7 +84,7 @@ class Dialog:
             self.dialog_history.append(reply_msg)
         self.dialog_history.extend([{"role": "user", "content": prompt},
                                     {"role": "assistant", "content": str(answer)}])
-        if total_tokens >= self.config.summarizer_limit:
+        if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
                          f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
             threading.Thread(target=self.summarizer, args=(chat_name,)).start()
