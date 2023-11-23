@@ -2,6 +2,7 @@
 import json
 import logging
 import random
+import threading
 import time
 import traceback
 
@@ -40,7 +41,7 @@ class Dialog:
             self.dialog_history.extend(dialog_history)
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
 
-    async def get_answer(self, message):
+    def get_answer(self, message, reply_msg):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         prompt = ""
         if random.randint(1, 50) == 1:
@@ -51,6 +52,8 @@ class Dialog:
             logging.info(f"Time updated for dialogue in chat {chat_name}")
         prompt += f"{utils.username_parser(message)}: {message.text}"
         dialog_buffer = self.dialog_history.copy()
+        if reply_msg:
+            dialog_buffer.append(reply_msg)
         dialog_buffer.append({"role": "user", "content": prompt})
         try:
             completion = self.client.chat.completions.create(
@@ -59,32 +62,25 @@ class Dialog:
                 temperature=self.config.temperature,
                 max_tokens=self.config.tokens_per_answer,
                 stream=False)
+            answer = completion.choices[0].message.content
         except Exception as e:
             logging.error(f"{e}\n{traceback.format_exc()}")
-            await message.reply(random.choice(self.config.prompts.errors))
-            return
+            return random.choice(self.config.prompts.errors)
 
-        answer = completion.choices[0].message.content
-        await message.reply(answer)
         total_tokens = completion.usage.total_tokens
         logging.info(f'{total_tokens} tokens counted by the OpenAI API in chat {chat_name}.')
         while self.dialogue_locker is True:
             logging.info(f"Adding messages is blocked for chat {chat_name} "
                          f"due to the work of the summarizer. Retry after 5s.")
             time.sleep(5)
+        if reply_msg:
+            self.dialog_history.append(reply_msg)
         self.dialog_history.extend([{"role": "user", "content": prompt},
                                     {"role": "assistant", "content": str(answer)}])
         if total_tokens >= self.config.summarizer_limit:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
                          f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
-            try:
-                self.dialogue_locker = True
-                self.summarizer(chat_name)
-            except Exception as e:
-                logging.error("Error using summarizer! The dialogue has not been optimized!")
-                logging.error(f"{e}\n{traceback.format_exc()}")
-            finally:
-                self.dialogue_locker = False
+            threading.Thread(target=self.summarizer, args=(chat_name,)).start()
         try:
             self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history[1::]))
         except Exception as e:
@@ -93,6 +89,7 @@ class Dialog:
         return answer
 
     def summarizer(self, chat_name):
+        self.dialogue_locker = True
         sys_prompt = self.dialog_history[:1:]
         if self.dialog_history[1]['role'] == 'assistant':
             # The dialogue cannot begin with the words of the assistant, which means it was a diary entry
@@ -124,11 +121,13 @@ class Dialog:
             logging.warning("GPT-4 may update over time. Returning num tokens assuming gpt-4-0613.")
             model = "gpt-4-0613"
         else:
-            raise NotImplementedError(
+            logging.error(
                 f"""Summarizer is not implemented for model {model}.
                 See https://github.com/openai/openai-python/blob/main/chatml.md
                 for information on how messages are converted to tokens."""
             )
+            self.dialogue_locker = False
+            return
 
         try:
             encoding = tiktoken.encoding_for_model(model)
@@ -149,9 +148,6 @@ class Dialog:
             if compression_limit_count >= compression_limit:
                 break
 
-        if dialogue[split]['role'] == 'assistant':
-            split += 1  # We do not separate the dialogue between the assistant and the user
-
         summarizer_text = self.config.prompts.summarizer
         if last_diary is not None:
             summarizer_text += f"\n{self.config.prompts.summarizer_last}"
@@ -167,17 +163,25 @@ class Dialog:
         compressed_dialogue.append({"role": "user", "content": utils.current_time_info(self.config)})
         original_dialogue = dialogue[split::]
 
-        completion = self.client.chat.completions.create(
-            model=model,
-            messages=compressed_dialogue,
-            temperature=self.config.temperature,
-            max_tokens=self.config.tokens_per_answer,
-            stream=False)
+        try:
+            completion = self.client.chat.completions.create(
+                model=model,
+                messages=compressed_dialogue,
+                temperature=self.config.temperature,
+                max_tokens=self.config.tokens_per_answer,
+                stream=False)
 
-        answer = completion.choices[0].message.content
+            answer = completion.choices[0].message.content
+        except Exception as e:
+            logging.error(f"Summarizing failed for chat {chat_name}!")
+            logging.error(f"{e}\n{traceback.format_exc()}")
+            self.dialogue_locker = False
+            return
+
         logging.info(f"Summarizing completed for chat {chat_name}, {completion.usage.total_tokens} tokens were used")
         result = sys_prompt
         result.append({"role": "assistant", "content": answer})
         result.extend(original_dialogue)
         result.append({"role": "user", "content": utils.current_time_info(self.config)})
         self.dialog_history = result
+        self.dialogue_locker = False

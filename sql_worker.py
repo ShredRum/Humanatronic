@@ -2,16 +2,21 @@ import sqlite3
 import time
 
 
-def open_close_db(function):
-    def wrapper(self, *args, **kwargs):
-        sqlite_connection = sqlite3.connect(self.dbname)
-        cursor = sqlite_connection.cursor()
-        data = function(self, cursor, *args, **kwargs)
-        sqlite_connection.commit()
-        cursor.close()
-        sqlite_connection.close()
-        return data
-    return wrapper
+class SQLWrapper:
+
+    def __init__(self, dbname):
+        self.dbname = dbname
+
+    def __enter__(self):
+        self.sqlite_connection = sqlite3.connect(self.dbname)
+        self.cursor = self.sqlite_connection.cursor()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not exc_type:
+            self.sqlite_connection.commit()
+        self.cursor.close()
+        self.sqlite_connection.close()
 
 
 class SqlWorker:
@@ -35,18 +40,19 @@ class SqlWorker:
         cursor.close()
         sqlite_connection.close()
 
-    @open_close_db
-    def dialog_update(self, cursor, context, dialog_text):
-        cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
-        record = cursor.fetchall()
-        if not record:
-            cursor.execute("""INSERT INTO chats VALUES (?,?,?);""",
-                           (context, dialog_text, int(time.time())))
-        else:
-            cursor.execute("""UPDATE chats SET dialog_text = ? WHERE context = ?""", (dialog_text, context))
+    def dialog_update(self, context, dialog_text):
+        with SQLWrapper(self.dbname) as sql_wrapper:
+            sql_wrapper.cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
+            record = sql_wrapper.cursor.fetchall()
+            if not record:
+                sql_wrapper.cursor.execute("""INSERT INTO chats VALUES (?,?,?);""",
+                                           (context, dialog_text, int(time.time())))
+            else:
+                sql_wrapper.cursor.execute("""UPDATE chats SET dialog_text = ? WHERE context = ?""",
+                                           (dialog_text, context))
 
-    @open_close_db
-    def dialog_get(self, cursor, context):
-        cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
-        dialog = cursor.fetchall()
-        return dialog
+    def dialog_get(self, context):
+        with SQLWrapper(self.dbname) as sql_wrapper:
+            sql_wrapper.cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
+            dialog = sql_wrapper.cursor.fetchall()
+            return dialog

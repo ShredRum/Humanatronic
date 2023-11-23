@@ -47,9 +47,17 @@ async def chatgpt(message: types.Message):
         dialogs.update({context: openai_core.Dialog(config, sql_helper, context)})
     if is_flooded(message):
         return
+    reply_msg = None
+    if message.reply_to_message:
+        if message.reply_to_message.text or message.reply_to_message.caption:
+            reply_text = message.reply_to_message.text or message.reply_to_message.caption
+            if message.reply_to_message.from_user.id == config.my_id:
+                reply_msg = {"role": "assistant", "content": reply_text}
+            else:
+                reply_msg = {"role": "user", "content": f"{utils.username_parser(message)}: {reply_text}"}
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    await dialogs.get(context).get_answer(message)
+    await message.reply(dialogs.get(context).get_answer(message, reply_msg))
 
 
 async def main() -> None:
@@ -57,5 +65,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v2.0 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v2.1 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
