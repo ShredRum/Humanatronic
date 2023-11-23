@@ -194,4 +194,9 @@ class Dialog:
         result.extend(original_dialogue)
         result.append({"role": "user", "content": utils.current_time_info(self.config)})
         self.dialog_history = result
+        try:
+            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history[1::]))
+        except Exception as e:
+            logging.error("Humanotronic was unable to save conversation information! Please check your database!")
+            logging.error(f"{e}\n{traceback.format_exc()}")
         self.dialogue_locker = False
