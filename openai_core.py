@@ -43,6 +43,9 @@ class Dialog:
 
     def get_answer(self, message, reply_msg):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
+        if reply_msg:
+            if self.dialog_history[-1]['content'] == reply_msg['content']:
+                reply_msg = None
         prompt = ""
         if random.randint(1, 50) == 1:
             prompt += f"{self.config.prompts.prefill} "
