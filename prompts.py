@@ -35,9 +35,9 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
               'the events in their lives that they talk about, their profession, interests, etc., '
               'as well as the topics that you talked about. Write text in English. '
               'Do not translate the names of people and animals into English.')
-summarizer_last = ("You must transfer from last memory dump all the facts about yourself and "
-                   "information about the people with whom you communicated. The most important thing is to "
-                   "transfer from there as many personal characteristics as possible! If the information "
+summarizer_last = ("You must transfer from last memory dump (it's last message sent to you) all the facts about "
+                   "yourself and information about the people with whom you communicated. The MOST important "
+                   "thing is to transfer from there as many personal characteristics as possible! If the information "
                    "does not fit, shorten and remove everyday dialogues and save important facts about"
                    "your character and the people with whom you spoke (professions, interests, their location, etc.)")
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
