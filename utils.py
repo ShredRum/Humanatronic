@@ -127,7 +127,6 @@ class ConfigData:
             config.set("ChatGPT", "memory-dump-size", "1000")
         if "vision" in model:
             config.set("ChatGPT", "vision", "true")
-            config.set("ChatGPT", "summarizer-limit", "12000")
         else:
             config.set("ChatGPT", "vision", "false")
         try:
