@@ -1,6 +1,9 @@
 import asyncio
+import base64
 import logging
+import random
 import time
+import traceback
 
 from aiogram import types, Bot, Dispatcher
 from aiogram.filters.command import Command
@@ -42,6 +45,21 @@ async def start(message: types.Message):
 async def chatgpt(message: types.Message):
     if not await utils.check_whitelist(message, config):
         return
+
+    photo_base64 = None
+    if (message.photo is not None or message.sticker is not None) and config.vision:
+        try:
+            if message.photo:
+                byte_file = await bot.download(message.photo[-1])
+            else:
+                byte_file = await bot.download(message.sticker.thumbnail)
+            # noinspection PyUnresolvedReferences
+            photo_base64 = base64.b64encode(byte_file.getvalue()).decode('utf-8')
+        except Exception as e:
+            logging.error(f"{e}\n{traceback.format_exc()}")
+            await message.reply(random.choice(config.prompts.errors))
+            return
+
     context = message.chat.id if not config.unified_context else 0
     if dialogs.get(context) is None:
         dialogs.update({context: openai_core.Dialog(config, sql_helper, context)})
@@ -57,7 +75,7 @@ async def chatgpt(message: types.Message):
                 reply_msg = {"role": "user", "content": f"{utils.username_parser(message)}: {reply_text}"}
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    await message.reply(dialogs.get(context).get_answer(message, reply_msg))
+    await message.reply(dialogs.get(context).get_answer(message, reply_msg, photo_base64))
 
 
 async def main() -> None:
@@ -65,5 +83,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v2.1.6 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v3.0 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())

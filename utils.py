@@ -1,3 +1,4 @@
+import base64
 import configparser
 import importlib
 import logging
@@ -7,6 +8,8 @@ import sys
 import time
 import traceback
 from importlib import reload
+from io import BytesIO
+from PIL import Image
 
 from aiogram import types
 
@@ -67,6 +70,7 @@ class ConfigData:
                 self.summarizer_limit = int(config["ChatGPT"]["summarizer-limit"])
                 self.tokens_per_answer = int(config["ChatGPT"]["tokens-per-answer"])
                 self.memory_dump_size = int(config["ChatGPT"]["memory-dump-size"])
+                self.vision = self.bool_init(config["ChatGPT"]["vision"])
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -121,6 +125,11 @@ class ConfigData:
             config.set("ChatGPT", "summarizer-limit", "2500")
             config.set("ChatGPT", "tokens-per-answer", "1000")
             config.set("ChatGPT", "memory-dump-size", "1000")
+        if "vision" in model:
+            config.set("ChatGPT", "vision", "true")
+            config.set("ChatGPT", "summarizer-limit", "12000")
+        else:
+            config.set("ChatGPT", "vision", "false")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")
@@ -147,14 +156,18 @@ def check_names(message, bot_id, prompts):
     :param prompts:
     :return:
     """
-    if message.text is None:
+
+    if all([message.text is None, message.photo is None, message.sticker is None]):
         return False
     if message.chat.id == message.from_user.id:
         return True
     if message.reply_to_message:
         if message.reply_to_message.from_user.id == bot_id:
             return True
-    msg_txt = re.sub(r'[^\w\s]', '', message.text.lower()).split()
+    msg_txt = message.text or message.caption
+    if msg_txt is None:
+        return False
+    msg_txt = re.sub(r'[^\w\s]', '', msg_txt.lower()).split()
     for name in prompts.names:
         if name.lower() in msg_txt:
             return True
@@ -204,3 +217,8 @@ async def check_whitelist(message: types.Message, config):
     logging.info(f"Rejected request from chat {chat_name}")
     await message.reply(f"Извини, но мне нельзя говорить {private}. Это не моя вина, просто на всех не разорваться.")
     return False
+
+
+def get_image_width(photo_base64):
+    width, _ = Image.open(BytesIO(base64.b64decode(photo_base64.split("base64,")[-1]))).size
+    return width

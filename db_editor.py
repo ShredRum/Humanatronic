@@ -108,7 +108,13 @@ class Editor:
         try:
             conversation_text = json.loads(self.read_conversation(conversation)[0][0])
             for conversation_piece in conversation_text:
-                print(f"{tuple(conversation_piece.values())[0]}: {tuple(conversation_piece.values())[1]}")
+                context_data = tuple(conversation_piece.values())[1]
+                if isinstance(context_data, str):
+                    print(f"{tuple(conversation_piece.values())[0]}: {context_data}")
+                else:
+                    for i in context_data:
+                        if i['type'] == 'text':
+                            print(f"{tuple(conversation_piece.values())[0]}: (IMAGE) {i['text']}")
         except Exception as e:
             print(f"{e}/{traceback.format_exc()}")
             return
@@ -120,6 +126,13 @@ class Editor:
         try:
             conversation_text = json.loads(self.read_conversation(conversation)[0][0])
             for conversation_piece in conversation_text:
+                context_data = tuple(conversation_piece.values())[1]
+                if isinstance(context_data, str):
+                    file_buffer += f"{tuple(conversation_piece.values())[0]}: {context_data}"
+                else:
+                    for i in context_data:
+                        if i['type'] == 'text':
+                            file_buffer += f"{tuple(conversation_piece.values())[0]}: {i['text']}"
                 file_buffer += f"[{tuple(conversation_piece.values())[0]}: {tuple(conversation_piece.values())[1]}]\n"
         except Exception as e:
             print(f"{e}/{traceback.format_exc()}")
@@ -156,7 +169,7 @@ class Editor:
                 subprocess.run(['open', file_path])
             elif sys.platform.startswith('win32'):
                 # для Windows
-                os.startfile(file_path)
+                os.startfile(file_path.replace("/", "\\"))
             elif sys.platform.startswith('linux'):
                 # для Linux
                 subprocess.run(['xdg-open', file_path])
@@ -278,6 +291,6 @@ class Editor:
 
 
 if __name__ == "__main__":
-    print("###HUMANOTRONIC DB EDITOR v0.3 LAUNCHED SUCCESSFULLY###")
+    print("###HUMANOTRONIC DB EDITOR v1.0 LAUNCHED SUCCESSFULLY###")
     while True:
         Editor()

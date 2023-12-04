@@ -41,23 +41,34 @@ class Dialog:
             self.dialog_history.extend(dialog_history)
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
 
-    def get_answer(self, message, reply_msg):
+    def get_answer(self, message, reply_msg, photo_base64):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         if reply_msg:
             if self.dialog_history[-1]['content'] == reply_msg['content']:
                 reply_msg = None
+
+        msg_txt = message.text or message.caption
+        if msg_txt is None:
+            msg_txt = "I sent a photo"
+
         prompt = ""
         if random.randint(1, 50) == 1:
             prompt += f"{self.config.prompts.prefill} "
             logging.info(f"Prompt reminded for dialogue in chat {chat_name}")
-        if random.randint(1, 30) == 1 or "врем" in message.text.lower() or "час" in message.text.lower():
+        if random.randint(1, 30) == 1 or "врем" in msg_txt.lower() or "час" in msg_txt.lower():
             prompt += f"{utils.current_time_info(self.config)} "
             logging.info(f"Time updated for dialogue in chat {chat_name}")
-        prompt += f"{utils.username_parser(message)}: {message.text}"
+        prompt += f"{utils.username_parser(message)}: {msg_txt}"
         dialog_buffer = self.dialog_history.copy()
         if reply_msg:
             dialog_buffer.append(reply_msg)
-        dialog_buffer.append({"role": "user", "content": prompt})
+        if photo_base64:
+            dialog_buffer.append({"role": "user",
+                                  "content": [{"type": "text", "text": prompt},
+                                              {"type": "image_url", "image_url":
+                                                  {"url": f"data:image/jpeg;base64,{photo_base64}"}}]})
+        else:
+            dialog_buffer.append({"role": "user", "content": prompt})
         summarizer_used = False
         while self.dialogue_locker is True:
             summarizer_used = True
@@ -85,8 +96,15 @@ class Dialog:
             time.sleep(5)
         if reply_msg:
             self.dialog_history.append(reply_msg)
-        self.dialog_history.extend([{"role": "user", "content": prompt},
-                                    {"role": "assistant", "content": str(answer)}])
+        if photo_base64:
+            self.dialog_history.extend([{"role": "user",
+                                         "content": [{"type": "text", "text": prompt},
+                                                     {"type": "image_url", "image_url":
+                                                     {"url": f"data:image/jpeg;base64,{photo_base64}"}}]},
+                                        {"role": "assistant", "content": str(answer)}])
+        else:
+            self.dialog_history.extend([{"role": "user", "content": prompt},
+                                        {"role": "assistant", "content": str(answer)}])
         if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
                          f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
@@ -98,6 +116,7 @@ class Dialog:
             logging.error(f"{e}\n{traceback.format_exc()}")
         return answer
 
+    # noinspection PyTypeChecker
     def summarizer(self, chat_name):
         self.dialogue_locker = True
         sys_prompt = self.dialog_history[:1:]
@@ -151,7 +170,15 @@ class Dialog:
         for message in dialogue:
             compression_limit_count += tokens_per_message
             for key, value in message.items():
-                compression_limit_count += len(encoding.encode(value))
+                try:
+                    compression_limit_count += len(encoding.encode(value))
+                except TypeError:
+                    for image_chk in value:
+                        if image_chk['type'] == 'text':
+                            compression_limit_count += len(encoding.encode(image_chk['text']))
+                        elif image_chk['type'] == 'image_url':
+                            compression_limit_count += utils.get_image_width(image_chk['image_url']['url'])
+                            # We can't accurately count image tokens, so we'll use an approximate value based on width
                 if key == "name":
                     compression_limit_count += tokens_per_name
             split += 1
@@ -170,17 +197,23 @@ class Dialog:
         else:
             compressed_dialogue.extend(dialogue[:split:])
             compressed_dialogue.append({"role": "user", "content": last_diary})
+
+        # When sending pictures to the summarizer, it does not work correctly, so we delete them
+        for cmp_index in range(len(compressed_dialogue)):
+            if isinstance(compressed_dialogue[cmp_index]['content'], list):
+                for i in compressed_dialogue[cmp_index]['content']:
+                    if i['type'] == 'text':
+                        compressed_dialogue[cmp_index]['content'] = i['text']
+
         compressed_dialogue.append({"role": "user", "content": utils.current_time_info(self.config)})
         original_dialogue = dialogue[split::]
-
         try:
             completion = self.client.chat.completions.create(
-                model=model,
+                model=self.config.model,
                 messages=compressed_dialogue,
                 temperature=self.config.temperature,
                 max_tokens=self.config.tokens_per_answer,
                 stream=False)
-
             answer = completion.choices[0].message.content
         except Exception as e:
             logging.error(f"Summarizing failed for chat {chat_name}!")
