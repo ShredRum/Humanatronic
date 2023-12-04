@@ -46,6 +46,9 @@ async def chatgpt(message: types.Message):
     if not await utils.check_whitelist(message, config):
         return
 
+    if message.text is None and message.caption is None and not config.vision:
+        return
+
     photo_base64 = None
     if (message.photo is not None or message.sticker is not None) and config.vision:
         try:
@@ -83,5 +86,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v3.0 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v3.0.1 LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
