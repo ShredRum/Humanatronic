@@ -105,6 +105,8 @@ class Dialog:
         else:
             self.dialog_history.extend([{"role": "user", "content": prompt},
                                         {"role": "assistant", "content": str(answer)}])
+        if self.config.vision and len(self.dialog_history) > 10:
+            self.cleaning_images()
         if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
                          f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
@@ -115,6 +117,15 @@ class Dialog:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
         return answer
+
+    # This code clears the context from old images so that they do not cause problems in operation
+    # noinspection PyTypeChecker
+    def cleaning_images(self):
+        for index in range(len(self.dialog_history)-11, -1, -1):
+            if isinstance(self.dialog_history[index]['content'], list):
+                for i in self.dialog_history[index]['content']:
+                    if i['type'] == 'text':
+                        self.dialog_history[index]['content'] = i['text']
 
     # noinspection PyTypeChecker
     def summarizer(self, chat_name):
