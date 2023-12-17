@@ -128,12 +128,11 @@ class Editor:
             for conversation_piece in conversation_text:
                 context_data = tuple(conversation_piece.values())[1]
                 if isinstance(context_data, str):
-                    file_buffer += f"{tuple(conversation_piece.values())[0]}: {context_data}"
+                    file_buffer += f"[{tuple(conversation_piece.values())[0]}: {context_data}]\n"
                 else:
                     for i in context_data:
                         if i['type'] == 'text':
-                            file_buffer += f"{tuple(conversation_piece.values())[0]}: {i['text']}"
-                file_buffer += f"[{tuple(conversation_piece.values())[0]}: {tuple(conversation_piece.values())[1]}]\n"
+                            file_buffer += f"[{tuple(conversation_piece.values())[0]}: {i['text']}]\n"
         except Exception as e:
             print(f"{e}/{traceback.format_exc()}")
             return False
@@ -291,6 +290,6 @@ class Editor:
 
 
 if __name__ == "__main__":
-    print("###HUMANOTRONIC DB EDITOR v1.0 LAUNCHED SUCCESSFULLY###")
+    print("###HUMANOTRONIC DB EDITOR v1.1 LAUNCHED SUCCESSFULLY###")
     while True:
         Editor()
