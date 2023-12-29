@@ -160,14 +160,6 @@ class Dialog:
         elif "gpt-4" in model:
             logging.warning("GPT-4 may update over time. Returning num tokens assuming gpt-4-0613.")
             model = "gpt-4-0613"
-        else:
-            logging.error(
-                f"""Summarizer is not implemented for model {model}.
-                See https://github.com/openai/openai-python/blob/main/chatml.md
-                for information on how messages are converted to tokens."""
-            )
-            self.dialogue_locker = False
-            return
 
         try:
             encoding = tiktoken.encoding_for_model(model)
