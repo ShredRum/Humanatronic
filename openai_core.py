@@ -32,9 +32,9 @@ class Dialog:
             dialog_history = json.loads(dialog_data[0][1])
             start_time = (f"{utils.current_time_info(config, dialog_data[0][2]).split(maxsplit=2)[2]} - "
                           f"it's time to start our conversation")
-            # Backward compatibility
-            if dialog_history[0]['role'] == 'system':
-                dialog_history = dialog_history[1::]
+            # Pictures saved in the database may cause problems when working without Vision
+            if not config.vision:
+                dialog_history = self.cleaning_images(dialog_history)
         self.dialog_history = [{"role": "system",
                                 "content": f"{config.prompts.start}\n{config.prompts.hard}\n{start_time}"}]
         if dialog_history:
@@ -106,7 +106,7 @@ class Dialog:
             self.dialog_history.extend([{"role": "user", "content": prompt},
                                         {"role": "assistant", "content": str(answer)}])
         if self.config.vision and len(self.dialog_history) > 10:
-            self.cleaning_images()
+            self.dialog_history = self.cleaning_images(self.dialog_history, last_only=True)
         if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
                          f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
@@ -120,12 +120,22 @@ class Dialog:
 
     # This code clears the context from old images so that they do not cause problems in operation
     # noinspection PyTypeChecker
-    def cleaning_images(self):
-        for index in range(len(self.dialog_history)-11, -1, -1):
-            if isinstance(self.dialog_history[index]['content'], list):
-                for i in self.dialog_history[index]['content']:
+    @staticmethod
+    def cleaning_images(dialog, last_only=False):
+
+        def cleaner():
+            if isinstance(dialog[index]['content'], list):
+                for i in dialog[index]['content']:
                     if i['type'] == 'text':
-                        self.dialog_history[index]['content'] = i['text']
+                        dialog[index]['content'] = i['text']
+
+        if last_only:
+            for index in range(len(dialog) - 11, -1, -1):
+                cleaner()
+        else:
+            for index in range(len(dialog)):
+                cleaner()
+        return dialog
 
     # noinspection PyTypeChecker
     def summarizer(self, chat_name):
@@ -202,12 +212,7 @@ class Dialog:
             compressed_dialogue.append({"role": "user", "content": last_diary})
 
         # When sending pictures to the summarizer, it does not work correctly, so we delete them
-        for cmp_index in range(len(compressed_dialogue)):
-            if isinstance(compressed_dialogue[cmp_index]['content'], list):
-                for i in compressed_dialogue[cmp_index]['content']:
-                    if i['type'] == 'text':
-                        compressed_dialogue[cmp_index]['content'] = i['text']
-
+        compressed_dialogue = self.cleaning_images(compressed_dialogue)
         compressed_dialogue.append({"role": "user", "content": utils.current_time_info(self.config)})
         original_dialogue = dialogue[split::]
         try:
