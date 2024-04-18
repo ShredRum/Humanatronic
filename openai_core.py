@@ -99,6 +99,7 @@ class Dialog:
             logging.info(f"Adding messages is blocked for chat {chat_name} due to the work of the summarizer.")
             summarizer_used = True
             await self.dialogue_locker.acquire()
+            self.dialogue_locker.release()
         try:
             args = [self.config.model,
                     dialog_buffer,
@@ -114,6 +115,7 @@ class Dialog:
             logging.info(f"Adding messages is blocked for chat {chat_name} due to the work of the summarizer.")
             summarizer_used = True
             await self.dialogue_locker.acquire()
+            self.dialogue_locker.release()
         if reply_msg:
             self.dialog_history.append(reply_msg)
         if photo_base64:
