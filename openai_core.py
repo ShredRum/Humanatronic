@@ -2,7 +2,7 @@
 import json
 import logging
 import random
-import threading
+import asyncio
 import time
 import traceback
 
@@ -12,10 +12,14 @@ import tiktoken
 import utils
 
 
+class ApiRequestException(Exception):
+    pass
+
+
 class Dialog:
 
     def __init__(self, config, sql_helper, context):
-        self.dialogue_locker = False
+        self.dialogue_locker = asyncio.Lock()
         self.config = config
         self.sql_helper = sql_helper
         self.context = context
@@ -42,7 +46,26 @@ class Dialog:
             self.dialog_history.extend(dialog_history)
         self.client = openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
 
-    def get_answer(self, message, reply_msg, photo_base64):
+    def send_api_request(self, model, messages,
+                         max_tokens=1000,
+                         temperature=None,
+                         attempts=3):
+        for _ in range(attempts):
+            try:
+                completion = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=False)
+                answer = completion.choices[0].message.content
+                total_tokens = completion.usage.total_tokens
+                return answer, total_tokens
+            except Exception as e:
+                logging.error(f"{e}\n{traceback.format_exc()}")
+        raise ApiRequestException
+
+    async def get_answer(self, message, reply_msg, photo_base64):
         chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
         if reply_msg:
             if self.dialog_history[-1]['content'] == reply_msg['content']:
@@ -72,30 +95,25 @@ class Dialog:
         else:
             dialog_buffer.append({"role": "user", "content": prompt})
         summarizer_used = False
-        while self.dialogue_locker is True:
+        if self.dialogue_locker.locked():
+            logging.info(f"Adding messages is blocked for chat {chat_name} due to the work of the summarizer.")
             summarizer_used = True
-            logging.info(f"Adding messages is blocked for chat {chat_name} "
-                         f"due to the work of the summarizer. Retry after 5s.")
-            time.sleep(5)
+            await self.dialogue_locker.acquire()
         try:
-            completion = self.client.chat.completions.create(
-                model=self.config.model,
-                messages=dialog_buffer,
-                temperature=self.config.temperature,
-                max_tokens=self.config.tokens_per_answer,
-                stream=False)
-            answer = completion.choices[0].message.content
-        except Exception as e:
-            logging.error(f"{e}\n{traceback.format_exc()}")
+            args = [self.config.model,
+                    dialog_buffer,
+                    self.config.tokens_per_answer,
+                    self.config.temperature]
+            answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                None, self.send_api_request, *args)
+        except ApiRequestException:
             return random.choice(self.config.prompts.errors)
 
-        total_tokens = completion.usage.total_tokens
         logging.info(f'{total_tokens} tokens counted by the OpenAI API in chat {chat_name}.')
-        while self.dialogue_locker is True:
+        if self.dialogue_locker.locked():
+            logging.info(f"Adding messages is blocked for chat {chat_name} due to the work of the summarizer.")
             summarizer_used = True
-            logging.info(f"Adding messages is blocked for chat {chat_name} "
-                         f"due to the work of the summarizer. Retry after 5s.")
-            time.sleep(5)
+            await self.dialogue_locker.acquire()
         if reply_msg:
             self.dialog_history.append(reply_msg)
         if photo_base64:
@@ -112,7 +130,8 @@ class Dialog:
         if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
                          f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
-            threading.Thread(target=self.summarizer, args=(chat_name,)).start()
+            async with self.dialogue_locker:
+                await self.summarizer(chat_name)
         try:
             self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history[1::]))
         except Exception as e:
@@ -141,8 +160,7 @@ class Dialog:
         return dialog
 
     # noinspection PyTypeChecker
-    def summarizer(self, chat_name):
-        self.dialogue_locker = True
+    async def summarizer(self, chat_name):
         sys_prompt = self.dialog_history[:1:]
         if self.dialog_history[1]['role'] == 'assistant':
             # The dialogue cannot begin with the words of the assistant, which means it was a diary entry
@@ -219,20 +237,17 @@ class Dialog:
         compressed_dialogue.append({"role": "user", "content": utils.current_time_info(self.config)})
         original_dialogue = dialogue[split::]
         try:
-            completion = self.client.chat.completions.create(
-                model=self.config.model,
-                messages=compressed_dialogue,
-                temperature=self.config.temperature,
-                max_tokens=self.config.tokens_per_answer,
-                stream=False)
-            answer = completion.choices[0].message.content
-        except Exception as e:
+            args = [self.config.model,
+                    compressed_dialogue,
+                    self.config.tokens_per_answer,
+                    self.config.temperature]
+            answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                None, self.send_api_request, *args)
+        except ApiRequestException:
             logging.error(f"Summarizing failed for chat {chat_name}!")
-            logging.error(f"{e}\n{traceback.format_exc()}")
-            self.dialogue_locker = False
             return
 
-        logging.info(f"Summarizing completed for chat {chat_name}, {completion.usage.total_tokens} tokens were used")
+        logging.info(f"Summarizing completed for chat {chat_name}, {total_tokens} tokens were used")
         result = sys_prompt
         result.append({"role": "assistant", "content": answer})
         result.extend(original_dialogue)
@@ -243,4 +258,3 @@ class Dialog:
         except Exception as e:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
-        self.dialogue_locker = False
