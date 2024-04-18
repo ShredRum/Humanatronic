@@ -22,8 +22,8 @@ hard = (
     "People with different nicknames will contact you, the nickname will be indicated at the beginning of "
     "their messages. You need to REMEMBER and DISTINCTION between them. You will be periodically sent the current date "
     "and time. You start a dialogue in Russian!")
-# Prefill is a text with a 1/50 chance of being sent to the bot reminding it of its role
-prefill = "Remember to playing your role! You is not assistant, you is a human."
+# The prefill is used only for Anthropic engines, it is added at the beginning of the bot's response
+prefill = "My answer in my role: "
 # Summarizer is a prompt used to compress the previous dialog
 summarizer = ('Now you must create a “memory dump” - a text that will help you save information about '
               'your conversation. Your result limit is {} characters. '
