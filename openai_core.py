@@ -60,6 +60,8 @@ class Dialog:
                     stream=False)
                 answer = completion.choices[0].message.content
                 total_tokens = completion.usage.total_tokens
+                if total_tokens == 0:
+                    raise ApiRequestException(answer)
                 return answer, total_tokens
             except Exception as e:
                 logging.error(f"{e}\n{traceback.format_exc()}")
