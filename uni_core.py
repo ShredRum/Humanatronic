@@ -53,7 +53,8 @@ class Dialog:
         self.client = get_client(config.model_vendor, config.api_key, config.base_url)
         self.memory_client = get_client(config.memory_model_vendor, config.memory_api_key, config.memory_base_url)
 
-    def send_api_request_openai(self, client, queue, model, messages,
+    @staticmethod
+    def send_api_request_openai(client, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -86,7 +87,8 @@ class Dialog:
         queue.release()
         raise ApiRequestException
 
-    def send_api_request_claude(self, client, queue, model, messages,
+    @staticmethod
+    def send_api_request_claude(client, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -97,18 +99,21 @@ class Dialog:
         if prefill:
             messages.append({"role": "assistant", "content": prefill})
 
+        kwargs = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+        if system:
+            kwargs.update({'system': system})
+
         queue.acquire()
         for _ in range(attempts):
             if not stream:
                 try:
-                    completion = client.messages.create(
-                        model=model,
-                        messages=messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        system=system,
-                        stream=False,
-                    )
+                    completion = client.messages.create(**kwargs)  # ДА НЕ БОМБИТ У МЕНЯ!!!!
                     if "error" in completion.id:
                         logging.error(completion.content[0].text)
                         raise ApiRequestException
@@ -124,13 +129,7 @@ class Dialog:
             try:
                 tokens_count = 0
                 text = ""
-                with client.messages.stream(
-                        model=model,
-                        messages=messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        system=system,
-                ) as stream:
+                with client.messages.stream(**kwargs) as stream:
                     empty_stream = True
                     error = False
                     for event in stream:
