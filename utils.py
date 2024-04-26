@@ -61,16 +61,25 @@ class ConfigData:
         while True:
             try:
                 config.read(self.path + "config.ini")
-                self.token = config["ChatGPT"]["token"]
-                self.api_key = config["ChatGPT"]["api-key"]
-                self.model = config["ChatGPT"]["model"]
-                self.whitelist = config["ChatGPT"]["whitelist-chats"]
-                self.timezone = int(config["ChatGPT"]["timezone"])
-                self.unified_context = self.bool_init(config["ChatGPT"]["unified-context"])
-                self.summarizer_limit = int(config["ChatGPT"]["summarizer-limit"])
-                self.tokens_per_answer = int(config["ChatGPT"]["tokens-per-answer"])
-                self.memory_dump_size = int(config["ChatGPT"]["memory-dump-size"])
-                self.vision = self.bool_init(config["ChatGPT"]["vision"])
+                self.token = config["Telegram"]["token"]
+                self.unified_context = self.bool_init(config["Telegram"]["unified-context"])
+                self.whitelist = config["Telegram"]["whitelist-chats"]
+                self.api_key = config["Personality"]["api-key"]
+                self.model = config["Personality"]["model"]
+                self.model_vendor = config["Personality"]["model-vendor"].lower()
+                self.timezone = int(config["Personality"]["timezone"])
+                self.summarizer_limit = int(config["Personality"]["summarizer-limit"])
+                self.tokens_per_answer = int(config["Personality"]["tokens-per-answer"])
+                self.memory_dump_size = int(config["Personality"]["memory-dump-size"])
+                self.vision = self.bool_init(config["Personality"]["vision"])
+                self.memory_api_key = config["Memory"]["api-key"]
+                self.memory_model = config["Memory"]["model"]
+                self.memory_model_vendor = config["Memory"]["model-vendor"].lower()
+                self.memory_tokens_per_answer = int(config["Memory"]["tokens-per-answer"])
+                if self.model_vendor not in ("openai", "anthropic"):
+                    raise KeyError('The model vendor must be "openai" or "anthropic"')
+                if self.memory_model_vendor not in ("openai", "anthropic"):
+                    raise KeyError('The "memory" model vendor must be "openai" or "anthropic"')
                 break
             except Exception as e:
                 logging.error((str(e)))
@@ -86,49 +95,83 @@ class ConfigData:
                 else:
                     sys.exit(0)
         try:
-            self.base_url = config["ChatGPT"]["base-url"]
+            self.base_url = config["Personality"]["base-url"]
             if self.base_url == "":
                 raise KeyError
         except (KeyError, TypeError):
             self.base_url = None
 
         try:
-            self.temperature = float(config["ChatGPT"]["temperature"])
+            self.temperature = float(config["Personality"]["temperature"])
             if self.temperature == "":
                 raise KeyError
         except (KeyError, TypeError, ValueError):
             self.temperature = None
+
+        try:
+            self.memory_base_url = config["Memory"]["base-url"]
+            if self.memory_base_url == "":
+                raise KeyError
+        except (KeyError, TypeError):
+            self.memory_base_url = None
+
+        try:
+            self.memory_temperature = float(config["Memory"]["temperature"])
+            if self.memory_temperature == "":
+                raise KeyError
+        except (KeyError, TypeError, ValueError):
+            self.memory_temperature = None
 
     def remake_conf(self):
         token, api_key, model = "", "", ""
         while token == "":
             token = input("Please, write your bot token: ")
         while api_key == "":
-            api_key = input("Please, write your OpenAI developer key: ")
+            api_key = input("Please, write your API key: ")
         while model == "":
-            model = input("Please, write your ChatGPT model name: ")
+            model = input("Please, write your model name: ")
+        model_vendor = "anthropic" if "claude" in model else "openai"
+
+        memory_api_key = input('Please, write your API key for memory model '
+                               'or leave blank to use values from the main model: ') or api_key
+        memory_model = input('Please, write your memory model name '
+                             'or leave blank to use values from the main model: ') or model
+        memory_model_vendor = "anthropic" if "claude" in memory_model else "openai"
+
         config = configparser.ConfigParser()
-        config.add_section("ChatGPT")
-        config.set("ChatGPT", "token", token)
-        config.set("ChatGPT", "whitelist-chats", "")
-        config.set("ChatGPT", "unified-context", "false")
-        config.set("ChatGPT", "api-key", api_key)
-        config.set("ChatGPT", "base-url", "")
-        config.set("ChatGPT", "model", model)
-        config.set("ChatGPT", "temperature", "0.5")
-        config.set("ChatGPT", "timezone", "0")
-        if "gpt-4" in model or "16k" in model or "32k" in model:
-            config.set("ChatGPT", "summarizer-limit", "6000")
-            config.set("ChatGPT", "tokens-per-answer", "2000")
-            config.set("ChatGPT", "memory-dump-size", "2000")
+        config.add_section("Telegram")
+        config.set("Telegram", "token", token)
+        config.set("Telegram", "whitelist-chats", "")
+        config.set("Telegram", "unified-context", "false")
+        config.add_section("Personality")
+        config.set("Personality", "api-key", api_key)
+        config.set("Personality", "base-url", "")
+        config.set("Personality", "model", model)
+        config.set("Personality", "model-vendor", model_vendor)
+        config.set("Personality", "temperature", "0.5")
+        config.set("Personality", "timezone", "0")
+        if any(["gpt-4" in model,
+                "claude" in model,
+                "16k" in model,
+                "32k" in model]):
+            config.set("Personality", "summarizer-limit", "6000")
+            config.set("Personality", "tokens-per-answer", "2000")
+            config.set("Personality", "memory-dump-size", "2000")
         else:
-            config.set("ChatGPT", "summarizer-limit", "2500")
-            config.set("ChatGPT", "tokens-per-answer", "1000")
-            config.set("ChatGPT", "memory-dump-size", "1000")
+            config.set("Personality", "summarizer-limit", "2500")
+            config.set("Personality", "tokens-per-answer", "1000")
+            config.set("Personality", "memory-dump-size", "1000")
         if "vision" in model:
-            config.set("ChatGPT", "vision", "true")
+            config.set("Personality", "vision", "true")
         else:
-            config.set("ChatGPT", "vision", "false")
+            config.set("Personality", "vision", "false")
+        config.add_section("Memory")
+        config.set("Memory", "api-key", memory_api_key)
+        config.set("Memory", "model", memory_model)
+        config.set("Memory", "model-vendor", memory_model_vendor)
+        config.set("Memory", "tokens-per-answer", "6000")
+        config.set("Memory", "base-url", "")
+        config.set("Memory", "temperature", "0.5")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")

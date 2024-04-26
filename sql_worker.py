@@ -30,26 +30,23 @@ class SqlWorker:
         cursor.execute(f"""CREATE TABLE if not exists chats (
                                     context TEXT NOT NULL PRIMARY KEY,
                                     dialog_text TEXT NOT NULL,
+                                    memory_dump TEXT,
                                     first_use INTEGER NOT NULL DEFAULT {int(time.time())});""")
-        # Backward compatibility
-        try:
-            cursor.execute(f"ALTER TABLE chats ADD COLUMN first_use INTEGER NOT NULL DEFAULT {int(time.time())}")
-        except sqlite3.OperationalError:
-            pass
         sqlite_connection.commit()
         cursor.close()
         sqlite_connection.close()
 
-    def dialog_update(self, context, dialog_text):
+    def dialog_update(self, context, dialog_text, memory_dump=None):
         with SQLWrapper(self.dbname) as sql_wrapper:
             sql_wrapper.cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
             record = sql_wrapper.cursor.fetchall()
             if not record:
-                sql_wrapper.cursor.execute("""INSERT INTO chats VALUES (?,?,?);""",
-                                           (context, dialog_text, int(time.time())))
+                sql_wrapper.cursor.execute("""INSERT INTO chats VALUES (?,?,?,?);""",
+                                           (context, dialog_text, memory_dump, int(time.time())))
             else:
-                sql_wrapper.cursor.execute("""UPDATE chats SET dialog_text = ? WHERE context = ?""",
-                                           (dialog_text, context))
+                sql_wrapper.cursor.execute("""
+                UPDATE chats SET dialog_text = ? memory_dump = ? WHERE context = ?""",
+                                           (dialog_text, memory_dump, context))
 
     def dialog_get(self, context):
         with SQLWrapper(self.dbname) as sql_wrapper:

@@ -8,7 +8,7 @@ import traceback
 from aiogram import types, Bot, Dispatcher
 from aiogram.filters.command import Command
 
-import openai_core
+import uni_core
 import sql_worker
 import utils
 
@@ -71,11 +71,7 @@ async def chatgpt(message: types.Message):
     reply_msg = None
     if message.reply_to_message:
         if message.reply_to_message.text or message.reply_to_message.caption:
-            reply_text = message.reply_to_message.text or message.reply_to_message.caption
-            if message.reply_to_message.from_user.id == config.my_id:
-                reply_msg = {"role": "assistant", "content": reply_text}
-            else:
-                reply_msg = {"role": "user", "content": f"{utils.username_parser(message)}: {reply_text}"}
+            reply_msg = message.reply_to_message.text or message.reply_to_message.caption
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
     answer = (await dialogs.get(context).get_answer(message, reply_msg, photo_base64)).split("\n\n")
