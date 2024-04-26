@@ -224,7 +224,6 @@ class Dialog:
                         self.config.memory_attempts]
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
-                print(answer)
                 memory_result = f"Memory: {answer}\n"
                 logging.info(f"Memory usage spent {total_tokens} tokens")
             except ApiRequestException:
