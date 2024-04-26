@@ -58,6 +58,7 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
+                                prefill=None,
                                 attempts=3):
         if system:
             system = [{"role": "system", "content": system}]
@@ -85,15 +86,11 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
+                                prefill=None,
                                 attempts=3):
 
-        msg = []
-        if system:
-            msg = [{'role': 'user', "content": "Dialogue is started"}, {'role': 'assistant', "content": system}]
-        msg.extend(messages)
-        messages = msg
-        messages.append({"role": "assistant",
-                         "content": self.config.prompts.prefill})
+        if prefill:
+            messages.append({"role": "assistant", "content": prefill})
 
         self.config.api_queue.acquire()
         for _ in range(attempts):
@@ -104,6 +101,7 @@ class Dialog:
                         messages=messages,
                         temperature=temperature,
                         max_tokens=max_tokens,
+                        system=system,
                         stream=False,
                     )
                     if "error" in completion.id:
@@ -126,6 +124,7 @@ class Dialog:
                         messages=messages,
                         temperature=temperature,
                         max_tokens=max_tokens,
+                        system=system,
                 ) as stream:
                     empty_stream = True
                     error = False

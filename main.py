@@ -65,7 +65,7 @@ async def chatgpt(message: types.Message):
 
     context = message.chat.id if not config.unified_context else 0
     if dialogs.get(context) is None:
-        dialogs.update({context: openai_core.Dialog(config, sql_helper, context)})
+        dialogs.update({context: uni_core.Dialog(config, sql_helper, context)})
     if is_flooded(message):
         return
     reply_msg = None
