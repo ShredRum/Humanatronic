@@ -53,8 +53,7 @@ class Dialog:
         self.client = get_client(config.model_vendor, config.api_key, config.base_url)
         self.memory_client = get_client(config.memory_model_vendor, config.memory_api_key, config.memory_base_url)
 
-    @staticmethod
-    def send_api_request_openai(client, model, messages,
+    def send_api_request_openai(self, client, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -66,6 +65,7 @@ class Dialog:
             system.extend(messages)
             messages = system
 
+        queue.acquire()
         for _ in range(attempts):
             try:
                 completion = client.chat.completions.create(
@@ -78,12 +78,15 @@ class Dialog:
                 total_tokens = completion.usage.total_tokens
                 if total_tokens == 0:
                     raise ApiRequestException(answer)
+                queue.release()
                 return answer, total_tokens
             except Exception as e:
                 logging.error(f"{e}\n{traceback.format_exc()}")
+
+        queue.release()
         raise ApiRequestException
 
-    def send_api_request_claude(self, client, model, messages,
+    def send_api_request_claude(self, client, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -94,7 +97,7 @@ class Dialog:
         if prefill:
             messages.append({"role": "assistant", "content": prefill})
 
-        self.config.api_queue.acquire()
+        queue.acquire()
         for _ in range(attempts):
             if not stream:
                 try:
@@ -112,7 +115,7 @@ class Dialog:
                     text = completion.content[0].text
                     while text[0] in (" ", "\n"):  # Sometimes Anthropic spits out spaces and line breaks
                         text = text[1::]  # at the beginning of text
-                    self.config.api_queue.release()
+                    queue.release()
                     return text, completion.usage.input_tokens + completion.usage.output_tokens
                 except Exception as e:
                     logging.error(f"{e}\n{traceback.format_exc()}")
@@ -153,13 +156,13 @@ class Dialog:
                         raise ApiRequestException("Empty text result, please check your prefill!")
                 while text[0] in (" ", "\n"):
                     text = text[1::]
-                self.config.api_queue.release()
+                queue.release()
                 return text, tokens_count
             except Exception as e:
                 logging.error(f"{e}\n{traceback.format_exc()}")
                 continue
 
-        self.config.api_queue.release()
+        queue.release()
         raise ApiRequestException
 
     def send_api_request(self, mode, *args):
@@ -167,10 +170,15 @@ class Dialog:
             logging.error('The mode of use should be "personality" or "memory"')
             raise ApiRequestException
         vendor = self.config.memory_model_vendor if mode == 'memory' else self.config.model_vendor
-        client = self.memory_client if mode == 'memory' else self.client
+        if mode == 'memory':
+            client = self.memory_client
+            queue = self.config.memory_api_queue
+        else:
+            client = self.client
+            queue = self.config.api_queue
         if vendor == 'anthropic':
-            return self.send_api_request_claude(client, *args)
-        return self.send_api_request_openai(client, *args)
+            return self.send_api_request_claude(client, queue, *args)
+        return self.send_api_request_openai(client, queue, *args)
 
     def get_image_context(self, photo_base64, prompt):
         if self.config.model_vendor == 'anthropic':

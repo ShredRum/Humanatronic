@@ -1,3 +1,4 @@
+from threading import BoundedSemaphore
 import base64
 import configparser
 import importlib
@@ -17,6 +18,7 @@ from aiogram import types
 class ConfigData:
     path = ""
     my_id = ""
+    api_queue: BoundedSemaphore
 
     def __init__(self):
 
@@ -74,12 +76,14 @@ class ConfigData:
                 self.vision = self.bool_init(config["Personality"]["vision"])
                 self.stream_mode = self.bool_init(config["Personality"]["stream-mode"])
                 self.attempts = int(config["Personality"]["gen-attempts"])
+                queue_size = int(config["Personality"]["queue-size"])
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
                 self.memory_model_vendor = config["Memory"]["model-vendor"].lower()
                 self.memory_tokens_per_answer = int(config["Memory"]["tokens-per-answer"])
                 self.memory_stream_mode = self.bool_init(config["Memory"]["stream-mode"])
                 self.memory_attempts = int(config["Memory"]["gen-attempts"])
+                memory_queue_size = int(config["Memory"]["queue-size"])
                 if self.model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The model vendor must be "openai" or "anthropic"')
                 if self.memory_model_vendor not in ("openai", "anthropic"):
@@ -125,6 +129,25 @@ class ConfigData:
                 raise KeyError
         except (KeyError, TypeError, ValueError):
             self.memory_temperature = None
+
+        if self.attempts <= 0:
+            logging.warning('''Value "gen-attempts" can't be less than or equal to 0, set to default (3)''')
+            self.attempts = 3
+
+        if queue_size <= 0:
+            logging.warning('''Value "queue-size" can't be less than or equal to 0, set to default (3)''')
+            queue_size = 3
+
+        if self.memory_attempts <= 0:
+            logging.warning('''Value "gen-attempts" can't be less than or equal to 0, set to default (3)''')
+            self.attempts = 3
+
+        if memory_queue_size <= 0:
+            logging.warning('''Value "queue-size" can't be less than or equal to 0, set to default (3)''')
+            queue_size = 3
+
+        self.api_queue = BoundedSemaphore(queue_size)
+        self.memory_api_queue = BoundedSemaphore(memory_queue_size)
 
     def remake_conf(self):
         token, api_key, model = "", "", ""
