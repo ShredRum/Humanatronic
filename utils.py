@@ -72,10 +72,14 @@ class ConfigData:
                 self.tokens_per_answer = int(config["Personality"]["tokens-per-answer"])
                 self.memory_dump_size = int(config["Personality"]["memory-dump-size"])
                 self.vision = self.bool_init(config["Personality"]["vision"])
+                self.stream_mode = self.bool_init(config["Personality"]["stream-mode"])
+                self.attempts = int(config["Personality"]["gen-attempts"])
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
                 self.memory_model_vendor = config["Memory"]["model-vendor"].lower()
                 self.memory_tokens_per_answer = int(config["Memory"]["tokens-per-answer"])
+                self.memory_stream_mode = self.bool_init(config["Memory"]["stream-mode"])
+                self.memory_attempts = int(config["Memory"]["gen-attempts"])
                 if self.model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The model vendor must be "openai" or "anthropic"')
                 if self.memory_model_vendor not in ("openai", "anthropic"):
@@ -150,6 +154,9 @@ class ConfigData:
         config.set("Personality", "model-vendor", model_vendor)
         config.set("Personality", "temperature", "0.5")
         config.set("Personality", "timezone", "0")
+        config.set("Personality", "stream-mode", "false")
+        config.set("Personality", "gen-attempts", "3")
+        config.set("Personality", "queue-size", "3")
         if any(["gpt-4" in model,
                 "claude" in model,
                 "16k" in model,
@@ -167,11 +174,14 @@ class ConfigData:
             config.set("Personality", "vision", "false")
         config.add_section("Memory")
         config.set("Memory", "api-key", memory_api_key)
+        config.set("Memory", "base-url", "")
         config.set("Memory", "model", memory_model)
         config.set("Memory", "model-vendor", memory_model_vendor)
-        config.set("Memory", "tokens-per-answer", "6000")
-        config.set("Memory", "base-url", "")
         config.set("Memory", "temperature", "0.5")
+        config.set("Memory", "stream-mode", "false")
+        config.set("Memory", "gen-attempts", "3")
+        config.set("Memory", "queue-size", "3")
+        config.set("Memory", "tokens-per-answer", "6000")
         try:
             config.write(open(self.path + "config.ini", "w"))
             print("New config file was created successful")

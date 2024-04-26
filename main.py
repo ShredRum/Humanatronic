@@ -54,10 +54,12 @@ async def chatgpt(message: types.Message):
         try:
             if message.photo:
                 byte_file = await bot.download(message.photo[-1])
+                mime = "image/jpeg"
             else:
                 byte_file = await bot.download(message.sticker.thumbnail)
+                mime = "image/webp"
             # noinspection PyUnresolvedReferences
-            photo_base64 = base64.b64encode(byte_file.getvalue()).decode('utf-8')
+            photo_base64 = {"data": base64.b64encode(byte_file.getvalue()).decode('utf-8'), "mime": mime}
         except Exception as e:
             logging.error(f"{e}\n{traceback.format_exc()}")
             await message.reply(random.choice(config.prompts.errors))
@@ -68,7 +70,7 @@ async def chatgpt(message: types.Message):
         dialogs.update({context: uni_core.Dialog(config, sql_helper, context)})
     if is_flooded(message):
         return
-    reply_msg = None
+    reply_msg = ""
     if message.reply_to_message:
         if message.reply_to_message.text or message.reply_to_message.caption:
             reply_msg = message.reply_to_message.text or message.reply_to_message.caption
@@ -89,5 +91,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v3.3.3 LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.0 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())

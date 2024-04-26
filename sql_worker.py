@@ -36,17 +36,21 @@ class SqlWorker:
         cursor.close()
         sqlite_connection.close()
 
-    def dialog_update(self, context, dialog_text, memory_dump=None):
+    def dialog_update(self, context, dialog_text):
         with SQLWrapper(self.dbname) as sql_wrapper:
             sql_wrapper.cursor.execute("""SELECT * FROM chats WHERE context = ?""", (context,))
             record = sql_wrapper.cursor.fetchall()
             if not record:
                 sql_wrapper.cursor.execute("""INSERT INTO chats VALUES (?,?,?,?);""",
-                                           (context, dialog_text, memory_dump, int(time.time())))
+                                           (context, dialog_text, None, int(time.time())))
             else:
-                sql_wrapper.cursor.execute("""
-                UPDATE chats SET dialog_text = ? memory_dump = ? WHERE context = ?""",
-                                           (dialog_text, memory_dump, context))
+                sql_wrapper.cursor.execute("""UPDATE chats SET dialog_text = ? WHERE context = ?""",
+                                           (dialog_text, context))
+
+    def memory_update(self, context, memory_dump):
+        with SQLWrapper(self.dbname) as sql_wrapper:
+            sql_wrapper.cursor.execute("""UPDATE chats SET memory_dump = ? WHERE context = ?""",
+                                       (memory_dump, context))
 
     def dialog_get(self, context):
         with SQLWrapper(self.dbname) as sql_wrapper:

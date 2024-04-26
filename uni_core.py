@@ -26,10 +26,10 @@ class Dialog:
         self.last_time = 0
         self.memory_dump = None
 
-        def get_client(vendor):
+        def get_client(vendor, api_key, base_url):
             if vendor == 'anthropic':
-                return anthropic.Anthropic(api_key=config.api_key, base_url=config.base_url)
-            return openai.OpenAI(api_key=config.api_key, base_url=config.base_url)
+                return anthropic.Anthropic(api_key=api_key, base_url=base_url)
+            return openai.OpenAI(api_key=api_key, base_url=base_url)
 
         try:
             dialog_data = sql_helper.dialog_get(context)
@@ -41,16 +41,17 @@ class Dialog:
             start_time = f"{utils.current_time_info(config).split(maxsplit=2)[2]} - it's time to start our conversation"
             self.dialog_history = []
         else:
-            self.memory_dump = json.loads(dialog_data[0][2])
-            start_time = (f"{utils.current_time_info(config, dialog_data[0][2]).split(maxsplit=2)[2]} - "
+            if dialog_data[0][2]:
+                self.memory_dump = json.loads(dialog_data[0][2])
+            start_time = (f"{utils.current_time_info(config, dialog_data[0][3]).split(maxsplit=2)[2]} - "
                           f"it's time to start our conversation")
-            dialog_history = json.loads(dialog_data[0][3])
+            self.dialog_history = json.loads(dialog_data[0][1])
             # Pictures saved in the database may cause problems when working without Vision
             if not config.vision:
-                self.dialog_history = self.cleaning_images(dialog_history)
+                self.dialog_history = self.cleaning_images(self.dialog_history)
         self.system = f"{config.prompts.start}\n{config.prompts.hard}\n{start_time}"
-        self.client = get_client(config.model_vendor)
-        self.memory_client = get_client(config.memory_model_vendor)
+        self.client = get_client(config.model_vendor, config.api_key, config.base_url)
+        self.memory_client = get_client(config.memory_model_vendor, config.memory_api_key, config.memory_base_url)
 
     @staticmethod
     def send_api_request_openai(client, model, messages,
@@ -58,11 +59,12 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                prefill=None,
                                 attempts=3):
+
         if system:
             system = [{"role": "system", "content": system}]
-            messages = system.extend(messages)
+            system.extend(messages)
+            messages = system
 
         for _ in range(attempts):
             try:
@@ -86,8 +88,8 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                prefill=None,
-                                attempts=3):
+                                attempts=3,
+                                prefill=None):
 
         if prefill:
             messages.append({"role": "assistant", "content": prefill})
@@ -160,84 +162,127 @@ class Dialog:
         self.config.api_queue.release()
         raise ApiRequestException
 
-    def send_api_request(self, mode, args):
+    def send_api_request(self, mode, *args):
         if mode not in ('personality', 'memory'):
-            raise ApiRequestException('The mode of use should be "personality" or "memory"')
+            logging.error('The mode of use should be "personality" or "memory"')
+            raise ApiRequestException
         vendor = self.config.memory_model_vendor if mode == 'memory' else self.config.model_vendor
         client = self.memory_client if mode == 'memory' else self.client
         if vendor == 'anthropic':
             return self.send_api_request_claude(client, *args)
         return self.send_api_request_openai(client, *args)
 
+    def get_image_context(self, photo_base64, prompt):
+        if self.config.model_vendor == 'anthropic':
+            return [
+                {"type": "image", "source":
+                    {"type": "base64", "media_type": photo_base64['mime'], "data": photo_base64['data']}},
+                {"type": "text", "text": prompt}]
+        else:
+            return [
+                {"type": "image_url", "image_url":
+                    {"url": f"data:{photo_base64['mime']};base64,{photo_base64['data']}"}},
+                {"type": "text", "text": prompt}]
+
     async def get_answer(self, message, reply_msg, photo_base64):
-        chat_name = utils.username_parser(message) if message.chat.title is None else message.chat.title
+        username = utils.username_parser(message)
+        chat_name = f"{username}'s private messages" if message.chat.title is None else f'chat {message.chat.title}'
         if reply_msg:
             if self.dialog_history[-1]['content'] == reply_msg:
-                reply_msg = None
+                reply_msg = ""
+            else:
+                reply_msg = f'In response to the message "{reply_msg}"\n'
 
         msg_txt = message.text or message.caption
         if msg_txt is None:
             msg_txt = "I sent a photo"
 
-        prompt = f"{utils.username_parser(message)}: {msg_txt}"
+        main_text = f"Message from person {username} from {chat_name}: {msg_txt}"
+
         dialog_buffer = self.dialog_history.copy()
-        if reply_msg:
-            content = reply_msg['content']  # python 3.11 and older
-            prompt = f'In response to the message "{content}":\n\n{prompt}'
+        summarizer_used = False
+        if self.dialogue_locker.locked():
+            logging.info(f"Adding messages is blocked for {chat_name} due to the work of the summarizer.")
+            summarizer_used = True
+            await self.dialogue_locker.acquire()
+            self.dialogue_locker.release()
+
+        memory_result = ""
+        if self.memory_dump:
+            request_to_memory = f'{username}: {msg_txt}'
+            if reply_msg:
+                request_to_memory = f'{reply_msg}{request_to_memory}'
+            try:
+                args = ['memory',
+                        self.config.memory_model,
+                        [{"role": "user",
+                          "content": f'Answer everything you remember from the request "{request_to_memory}"'}],
+                        self.config.memory_tokens_per_answer,
+                        f'{self.config.prompts.memory_read}{self.memory_dump}',
+                        self.config.memory_temperature,
+                        self.config.memory_stream_mode,
+                        self.config.memory_attempts]
+                answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                    None, self.send_api_request, *args)
+                print(answer)
+                memory_result = f"Memory: {answer}\n"
+                logging.info(f"Memory usage spent {total_tokens} tokens")
+            except ApiRequestException:
+                logging.error("The character's memory could not process the request")
+
+        current_time = ""
         if any([random.randint(1, 30) == 1,  # Time is reminded of Humanotronic with a probability of 1/30
                 int(time.time()) - self.last_time >= 3600,
                 "врем" in msg_txt.lower(),
                 "час" in msg_txt.lower()
                 ]):
-            prompt += f"\n\n{utils.current_time_info(self.config)} "
-            logging.info(f"Time updated for dialogue in chat {chat_name}")
+            current_time = f"{utils.current_time_info(self.config)}\n"
+            logging.info(f"Time updated for dialogue in {chat_name}")
+        prompt = f'{current_time}{memory_result}{reply_msg}{main_text}'
         if photo_base64:
-            dialog_buffer.append({"role": "user",
-                                  "content": [{"type": "text", "text": prompt},
-                                              {"type": "image_url", "image_url":
-                                                  {"url": f"data:image/jpeg;base64,{photo_base64}"}}]})
+            dialog_buffer.append({"role": "user", "content": self.get_image_context(photo_base64, prompt)})
         else:
             dialog_buffer.append({"role": "user", "content": prompt})
-        summarizer_used = False
         if self.dialogue_locker.locked():
-            logging.info(f"Adding messages is blocked for chat {chat_name} due to the work of the summarizer.")
+            logging.info(f"Adding messages is blocked for {chat_name} due to the work of the summarizer.")
             summarizer_used = True
             await self.dialogue_locker.acquire()
             self.dialogue_locker.release()
         try:
-            args = [self.config.model,
+            args = ['personality',
+                    self.config.model,
                     dialog_buffer,
-                    self.config.tokens_per_answer,
-                    self.config.temperature]
+                    self.config.tokens_per_answer, self.system,
+                    self.config.temperature,
+                    self.config.stream_mode,
+                    self.config.attempts]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                None, self.send_api_request, args)
+                None, self.send_api_request, *args)
         except ApiRequestException:
             return random.choice(self.config.prompts.errors)
 
-        logging.info(f'{total_tokens} tokens counted by the OpenAI API in chat {chat_name}.')
+        logging.info(f'{total_tokens} tokens counted by the OpenAI API in {chat_name}.')
         if self.dialogue_locker.locked():
-            logging.info(f"Adding messages is blocked for chat {chat_name} due to the work of the summarizer.")
+            logging.info(f"Adding messages is blocked for {chat_name} due to the work of the summarizer.")
             summarizer_used = True
             await self.dialogue_locker.acquire()
             self.dialogue_locker.release()
+        prompt = f'{current_time}{reply_msg}{main_text}'
         if photo_base64:
-            self.dialog_history.extend([{"role": "user",
-                                         "content": [{"type": "text", "text": prompt},
-                                                     {"type": "image_url", "image_url":
-                                                         {"url": f"data:image/jpeg;base64,{photo_base64}"}}]},
-                                        {"role": "assistant", "content": str(answer)}])
+            self.dialog_history.extend([{"role": "user", "content": self.get_image_context(photo_base64, prompt)},
+                                        {"role": "assistant", "content": answer}])
         else:
             self.dialog_history.extend([{"role": "user", "content": prompt},
-                                        {"role": "assistant", "content": str(answer)}])
+                                        {"role": "assistant", "content": answer}])
         if self.config.vision and len(self.dialog_history) > 10:
             self.dialog_history = self.cleaning_images(self.dialog_history, last_only=True)
         if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "
-                         f"the {chat_name} chat has been exceeded. Using a lazy summarizer")
+                         f"the {chat_name} has been exceeded. Using a lazy summarizer")
             async with self.dialogue_locker:
                 await self.summarizer(chat_name)
         try:
-            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history[1::]))
+            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history))
         except Exception as e:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
@@ -283,16 +328,17 @@ class Dialog:
     async def summarizer(self, chat_name):
 
         summarizer_text = self.config.prompts.summarizer.format(self.config.memory_dump_size)
-        split = self.summarizer_index(self.dialog_history)
+        split = self.summarizer_index()
 
         compressed_dialogue = self.dialog_history[:split:]
-        compressed_dialogue.append({"role": "user", "content": f'{summarizer_text}\n{self.system}'
-                                                               f'\n{utils.current_time_info(self.config)}'})
+        compressed_dialogue.append({"role": "user",
+                                    "content": f'{summarizer_text}\n{utils.current_time_info(self.config)}'})
 
         # When sending pictures to the summarizer, it does not work correctly, so we delete them
         compressed_dialogue = self.cleaning_images(compressed_dialogue)
         try:
-            args = [self.config.model,
+            args = ['personality',
+                    self.config.model,
                     compressed_dialogue,
                     self.config.tokens_per_answer, None,
                     self.config.temperature,
@@ -300,15 +346,32 @@ class Dialog:
                     self.config.attempts]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
+            logging.info(f"{total_tokens} tokens were used to compress the dialogue")
+
+            if self.memory_dump:
+                args = ['memory',
+                        self.config.memory_model,
+                        [{"role": "user",
+                          "content": f'Update information on the following memory block:\n{answer}'}],
+                        self.config.memory_tokens_per_answer,
+                        f'{self.config.prompts.memory_write}{self.memory_dump}',
+                        self.config.memory_temperature,
+                        self.config.memory_stream_mode,
+                        self.config.memory_attempts]
+                self.memory_dump, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                    None, self.send_api_request, *args)
+                logging.info(f"{total_tokens} tokens used to update the memory dump")
+            else:
+                self.memory_dump = answer
         except ApiRequestException:
-            logging.error(f"Summarizing failed for chat {chat_name}!")
+            logging.error(f"Summarizing failed for {chat_name}!")
             return
 
-        logging.info(f"Summarizing completed for chat {chat_name}, "
+        logging.info(f"Summarizing completed for {chat_name}, "
                      f"{total_tokens} tokens were used")
         self.dialog_history = self.dialog_history[split::]
         try:
-            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history))
+            self.sql_helper.memory_update(self.context, json.dumps(self.memory_dump))
         except Exception as e:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
