@@ -177,6 +177,7 @@ class Dialog:
             queue = self.config.api_queue
         if vendor == 'anthropic':
             return self.send_api_request_claude(client, queue, *args)
+        args = args[:-1]  # I hope someday I will remove these wildly ugly crutches from the code...
         return self.send_api_request_openai(client, queue, *args)
 
     def get_image_context(self, photo_base64, prompt):
@@ -261,7 +262,8 @@ class Dialog:
                     self.config.tokens_per_answer, self.system,
                     self.config.temperature,
                     self.config.stream_mode,
-                    self.config.attempts]
+                    self.config.attempts,
+                    self.config.prompts.prefill]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
         except ApiRequestException:
