@@ -90,6 +90,8 @@ class Dialog:
                 if total_tokens == 0:
                     raise ApiRequestException(answer)
                 queue.release()
+                print(messages)
+                print(answer)
                 return answer, total_tokens
             except Exception as e:
                 logging.error(f"OPENAI API REQUEST ERROR!\n{self.html_parser(e)}")
@@ -238,7 +240,8 @@ class Dialog:
                         f'{self.config.prompts.memory_read}{self.memory_dump}',
                         self.config.memory_temperature,
                         self.config.memory_stream_mode,
-                        self.config.memory_attempts]
+                        self.config.memory_attempts,
+                        self.config.prompts.memory_prefill]
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
                 memory_result = f"Memory: {answer}\n"
@@ -367,7 +370,7 @@ class Dialog:
 
             if self.memory_dump:
                 args = ['memory',
-                        self.config.memory_model,
+                        self.config.model,
                         [{"role": "user",
                           "content": f'Update information on the following memory block:\n{answer}'}],
                         self.config.memory_tokens_per_answer,

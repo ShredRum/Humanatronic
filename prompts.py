@@ -45,12 +45,14 @@ memory_read = (
     'ONLY describing YOUR personal characteristics! Answer only in English, but leave proper names as they are.'
     '\nCharacter memory:\n')
 memory_write = (
-    'You work as a memory manager. Your job is to update data as requested by the user. When you update data, you must '
-    'update your character description according to the new data, update date and time in data and display all the '
-    'information you know in the response. If new information contradicts old information, you need to overwrite the '
-    'old information with the new one. The information in the "Conversation Topics" section is completely rewritten! '
-    'Answer only in English, but leave proper names as they are. The size of the answer is not limited.'
-    '\nCharacter memory:\n')
+    'You work as a memory manager. Your job is to update data as requested by the user, preserving the old information '
+    '(from the “character memory” section at the end of the text). When you update data, you must update your '
+    'character description according to the new data, update date and time in data and display all the information you '
+    'know in the response. If new information contradicts old information, you need to overwrite contradictory parts '
+    'of the old information with the new one - otherwise it is necessary to save the old information. The information '
+    'in the "Conversation Topics" section is completely rewritten! Answer only in English, but leave proper names as '
+    'they are. The size of the answer is not limited.\nCharacter memory:\n')
+memory_prefill = "My short answer:"
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",
