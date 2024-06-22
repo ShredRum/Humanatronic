@@ -8,6 +8,7 @@ import traceback
 
 import anthropic
 import openai
+import html2text
 
 import utils
 
@@ -54,7 +55,16 @@ class Dialog:
         self.memory_client = get_client(config.memory_model_vendor, config.memory_api_key, config.memory_base_url)
 
     @staticmethod
-    def send_api_request_openai(client, queue, model, messages,
+    def html_parser(exc_text):
+        exc_text = str(exc_text)
+        if "html>" not in exc_text:
+            return exc_text
+        text_converter = html2text.HTML2Text()
+        # Отключаем обрамление ссылок символом *
+        text_converter.ignore_links = True
+        return text_converter.handle(exc_text)
+
+    def send_api_request_openai(self, client, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -82,13 +92,12 @@ class Dialog:
                 queue.release()
                 return answer, total_tokens
             except Exception as e:
-                logging.error(f"{e}\n{traceback.format_exc()}")
+                logging.error(f"OPENAI API REQUEST ERROR!\n{self.html_parser(e)}")
 
         queue.release()
         raise ApiRequestException
 
-    @staticmethod
-    def send_api_request_claude(client, queue, model, messages,
+    def send_api_request_claude(self, client, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -123,7 +132,7 @@ class Dialog:
                     queue.release()
                     return text, completion.usage.input_tokens + completion.usage.output_tokens
                 except Exception as e:
-                    logging.error(f"{e}\n{traceback.format_exc()}")
+                    logging.error(f"ANTHROPIC API REQUEST ERROR!\n{self.html_parser(e)}")
                     continue
 
             try:
@@ -158,7 +167,7 @@ class Dialog:
                 queue.release()
                 return text, tokens_count
             except Exception as e:
-                logging.error(f"{e}\n{traceback.format_exc()}")
+                logging.error(f"ANTHROPIC API REQUEST ERROR!\n{self.html_parser(e)}")
                 continue
 
         queue.release()
