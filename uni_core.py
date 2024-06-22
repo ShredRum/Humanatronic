@@ -90,8 +90,6 @@ class Dialog:
                 if total_tokens == 0:
                     raise ApiRequestException(answer)
                 queue.release()
-                print(messages)
-                print(answer)
                 return answer, total_tokens
             except Exception as e:
                 logging.error(f"OPENAI API REQUEST ERROR!\n{self.html_parser(e)}")
