@@ -65,6 +65,7 @@ class ConfigData:
                 config.read(self.path + "config.ini")
                 self.token = config["Telegram"]["token"]
                 self.unified_context = self.bool_init(config["Telegram"]["unified-context"])
+                self.service_messages = self.bool_init(config["Telegram"]["service-messages"])
                 self.whitelist = config["Telegram"]["whitelist-chats"]
                 self.api_key = config["Personality"]["api-key"]
                 self.model = config["Personality"]["model"]
@@ -170,6 +171,7 @@ class ConfigData:
         config.set("Telegram", "token", token)
         config.set("Telegram", "whitelist-chats", "")
         config.set("Telegram", "unified-context", "false")
+        config.set("Telegram", "service-messages", "true")
         config.add_section("Personality")
         config.set("Personality", "api-key", api_key)
         config.set("Personality", "base-url", "")
@@ -290,7 +292,9 @@ async def check_whitelist(message: types.Message, config):
     # noinspection PyUnresolvedReferences
     chat_name = username_parser(message) if message.chat.title is None else message.chat.title
     logging.info(f"Rejected request from chat {chat_name}")
-    await message.reply(f"Извини, но мне нельзя говорить {private}. Это не моя вина, просто на всех не разорваться.")
+    if config.service_messages:
+        await message.reply(f"Извини, но мне нельзя говорить {private}. "
+                            f"Это не моя вина, просто на всех не разорваться.")
     return False
 
 
