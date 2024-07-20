@@ -38,12 +38,12 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
               'Write text in English. Do not translate the names of people and animals into English.')
 # Memory prompts is a system prompts for the neural network used to store memories
 memory_read = (
-    'You work as a memory manager. Your job is to provide memories as requested by the user. '
-    'When you provide memories, you are only giving the user a answer based ONLY WHAT IS SPECIFIED IN '
-    '"character memory" part. The answer should be several sentences long, but should contain necessary information '
-    'about the request and should not include your own reasoning. If you are asked to talk about yourself, you are '
-    'ONLY describing YOUR personal characteristics! Answer only in English, but leave proper names as they are.'
-    '\nCharacter memory:\n')
+    'You work as a memory manager. Your job is to provide information as requested by the user. '
+    'The answer should be in the format “I remember from my character memory that this or that happened". The request '
+    'consists of "Message from user nickname: user message". It is a priority to respond according to the content of '
+    'the message, and only secondarily take into account the user’s nickname. Use information from the “character’s '
+    'memory” about the dialogues that the character had to give a correct and not very long answer. If you do not have '
+    'the information requested, write only one word - "27_warn_hum_noninfo" - and nothing more.')
 memory_write = (
     'You work as a memory manager. Your job is to update data as requested by the user, preserving the old information '
     '(from the “character memory” section at the end of the text). When you update data, you must update your '

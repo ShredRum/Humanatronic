@@ -226,15 +226,21 @@ class Dialog:
 
         memory_result = ""
         if self.memory_dump:
-            request_to_memory = f'{username}: {msg_txt}'
+            request_to_memory = f'Message from user {username}: {msg_txt}'
             if reply_msg:
                 request_to_memory = f'{reply_msg}{request_to_memory}'
             try:
-                sys_mem_prompt = f'{self.config.prompts.memory_read}{self.memory_dump}'
+                sys_mem_prompt = f'{self.config.prompts.memory_read}'
+                mem_request = [{"role": "user",
+                                "content": f'This is YOUR OWN CHARACTER MEMORY.\n'
+                                           f'"{self.memory_dump}"'},
+                               {"role": "assistant",
+                                "content": 'Thanks, I will use the information from this message to answer'},
+                               {"role": "user",
+                                "content": request_to_memory}]
                 args = ['memory',
                         self.config.memory_model,
-                        [{"role": "user",
-                          "content": f'Answer everything you remember from the request "{request_to_memory}"'}],
+                        mem_request,
                         self.config.memory_tokens_per_answer, sys_mem_prompt,
                         self.config.memory_temperature,
                         self.config.memory_stream_mode,
@@ -243,9 +249,10 @@ class Dialog:
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
                 if self.config.full_debug:
-                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY REQUEST--\n\n{sys_mem_prompt}\n\n{dialog_buffer}"
+                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY REQUEST--\n\n{sys_mem_prompt}\n\n{mem_request}"
                                   f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY REQUEST--")
-                memory_result = f"Memory: {answer}\n"
+                if "27_warn_hum_noninfo" not in answer:  # If memory has no information, we filter it out completely
+                    memory_result = f"Memory: {answer}\n"
                 logging.info(f"Memory usage spent {total_tokens} tokens")
             except ApiRequestException:
                 logging.error("The character's memory could not process the request")
