@@ -276,6 +276,9 @@ class Dialog:
                     self.config.prompts.prefill]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
+            if self.config.full_debug:
+                logging.debug(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{dialog_buffer}"
+                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR API REQUEST--")
         except ApiRequestException:
             return random.choice(self.config.prompts.errors)
 
@@ -364,18 +367,25 @@ class Dialog:
                     self.config.attempts]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
+            if self.config.full_debug:
+                logging.debug(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING--\n\n{compressed_dialogue}"
+                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR DIALOG COMPRESSING--")
             logging.info(f"{total_tokens} tokens were used to compress the dialogue")
 
             if self.memory_dump:
+                memory_dump_request = [{"role": "user",
+                                        "content": f'Update information on the following memory block:\n{answer}'}]
                 args = ['memory',
                         self.config.model,
-                        [{"role": "user",
-                          "content": f'Update information on the following memory block:\n{answer}'}],
+                        memory_dump_request,
                         self.config.memory_tokens_per_answer,
                         f'{self.config.prompts.memory_write}{self.memory_dump}',
                         self.config.memory_temperature,
                         self.config.memory_stream_mode,
                         self.config.memory_attempts]
+                if self.config.full_debug:
+                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{memory_dump_request}"
+                                  f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--")
                 self.memory_dump, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
                 logging.info(f"{total_tokens} tokens used to update the memory dump")

@@ -40,7 +40,8 @@ class ConfigData:
                 logging.FileHandler(self.path + "logging.log", 'w', 'utf-8'),
                 logging.StreamHandler(sys.stdout)
             ],
-            level=logging.INFO,
+            force=True,
+            level=logging.DEBUG,
             format='%(asctime)s %(levelname)s: %(message)s',
             datefmt="%d-%m-%Y %H:%M:%S")
 
@@ -77,6 +78,7 @@ class ConfigData:
                 self.vision = self.bool_init(config["Personality"]["vision"])
                 self.stream_mode = self.bool_init(config["Personality"]["stream-mode"])
                 self.attempts = int(config["Personality"]["gen-attempts"])
+                self.full_debug = self.bool_init(config["Personality"]["full-debug"])
                 queue_size = int(config["Personality"]["queue-size"])
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
@@ -91,7 +93,7 @@ class ConfigData:
                     raise KeyError('The "memory" model vendor must be "openai" or "anthropic"')
                 break
             except Exception as e:
-                logging.error((str(e)))
+                logging.error(str(e))
                 logging.error(traceback.format_exc())
                 time.sleep(1)
                 print("\nInvalid config file! Trying to remake!")
@@ -182,6 +184,7 @@ class ConfigData:
         config.set("Personality", "stream-mode", "false")
         config.set("Personality", "gen-attempts", "3")
         config.set("Personality", "queue-size", "3")
+        config.set("Personality", "full-debug", "false")
         if any(["gpt-4" in model,
                 "claude" in model,
                 "16k" in model,
