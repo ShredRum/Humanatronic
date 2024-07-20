@@ -230,18 +230,21 @@ class Dialog:
             if reply_msg:
                 request_to_memory = f'{reply_msg}{request_to_memory}'
             try:
+                sys_mem_prompt = f'{self.config.prompts.memory_read}{self.memory_dump}'
                 args = ['memory',
                         self.config.memory_model,
                         [{"role": "user",
                           "content": f'Answer everything you remember from the request "{request_to_memory}"'}],
-                        self.config.memory_tokens_per_answer,
-                        f'{self.config.prompts.memory_read}{self.memory_dump}',
+                        self.config.memory_tokens_per_answer, sys_mem_prompt,
                         self.config.memory_temperature,
                         self.config.memory_stream_mode,
                         self.config.memory_attempts,
                         self.config.prompts.memory_prefill]
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
+                if self.config.full_debug:
+                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY REQUEST--\n\n{sys_mem_prompt}\n\n{dialog_buffer}"
+                                  f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY REQUEST--")
                 memory_result = f"Memory: {answer}\n"
                 logging.info(f"Memory usage spent {total_tokens} tokens")
             except ApiRequestException:
@@ -277,7 +280,7 @@ class Dialog:
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
             if self.config.full_debug:
-                logging.debug(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{dialog_buffer}"
+                logging.debug(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{self.system}\n\n{dialog_buffer}"
                               f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR API REQUEST--")
         except ApiRequestException:
             return random.choice(self.config.prompts.errors)
@@ -375,17 +378,18 @@ class Dialog:
             if self.memory_dump:
                 memory_dump_request = [{"role": "user",
                                         "content": f'Update information on the following memory block:\n{answer}'}]
+                sys_mem_prompt = f'{self.config.prompts.memory_write}{self.memory_dump}'
                 args = ['memory',
                         self.config.model,
                         memory_dump_request,
-                        self.config.memory_tokens_per_answer,
-                        f'{self.config.prompts.memory_write}{self.memory_dump}',
+                        self.config.memory_tokens_per_answer, sys_mem_prompt,
                         self.config.memory_temperature,
                         self.config.memory_stream_mode,
                         self.config.memory_attempts]
                 if self.config.full_debug:
-                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{memory_dump_request}"
-                                  f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--")
+                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{sys_mem_prompt}\n\n"
+                                  f"{memory_dump_request}\n\n"
+                                  f"{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--")
                 self.memory_dump, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
                 logging.info(f"{total_tokens} tokens used to update the memory dump")
