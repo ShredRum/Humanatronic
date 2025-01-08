@@ -78,6 +78,7 @@ class Dialog:
 
         queue.acquire()
         for _ in range(attempts):
+            completion = 'The "completion" object was not received.'
             try:
                 completion = client.chat.completions.create(
                     model=model,
@@ -93,6 +94,9 @@ class Dialog:
                 return answer, total_tokens
             except Exception as e:
                 logging.error(f"OPENAI API REQUEST ERROR!\n{self.html_parser(e)}")
+                if self.config.full_debug:
+                    logging.error(traceback.format_exc())
+                    logging.error(completion)
 
         queue.release()
         raise ApiRequestException
@@ -120,6 +124,7 @@ class Dialog:
 
         queue.acquire()
         for _ in range(attempts):
+            completion = 'The "completion" object was not received.'
             if not stream:
                 try:
                     completion = client.messages.create(**kwargs)  # ДА НЕ БОМБИТ У МЕНЯ!!!!
@@ -133,6 +138,9 @@ class Dialog:
                     return text, completion.usage.input_tokens + completion.usage.output_tokens
                 except Exception as e:
                     logging.error(f"ANTHROPIC API REQUEST ERROR!\n{self.html_parser(e)}")
+                    if self.config.full_debug:
+                        logging.error(traceback.format_exc())
+                        logging.error(completion)
                     continue
 
             try:
@@ -168,6 +176,9 @@ class Dialog:
                 return text, tokens_count
             except Exception as e:
                 logging.error(f"ANTHROPIC API REQUEST ERROR!\n{self.html_parser(e)}")
+                if self.config.full_debug:
+                    logging.error(traceback.format_exc())
+                    logging.error(completion)
                 continue
 
         queue.release()
