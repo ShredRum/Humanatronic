@@ -71,6 +71,9 @@ async def chatgpt(message: types.Message):
     if message.text is None and message.caption is None and not config.vision:
         return
 
+    if message.quote and not config.reply_to_quotes:
+        return
+
     photo_base64 = None
     if (message.photo is not None or message.sticker is not None) and config.vision:
         try:
@@ -92,10 +95,14 @@ async def chatgpt(message: types.Message):
         dialogs.update({context: uni_core.Dialog(config, sql_helper, context)})
     if is_flooded(message):
         return
+
     reply_msg = ""
     if message.reply_to_message:
-        if message.reply_to_message.text or message.reply_to_message.caption:
+        if message.quote:
+            reply_msg = message.quote.text
+        elif message.reply_to_message.text or message.reply_to_message.caption:
             reply_msg = message.reply_to_message.text or message.reply_to_message.caption
+
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     parse_mode = 'markdown' if config.markdown_enable else None
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
@@ -117,5 +124,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.3 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.4 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
