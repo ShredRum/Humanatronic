@@ -223,7 +223,7 @@ class Dialog:
 
         msg_txt = message.text or message.caption
         if msg_txt is None:
-            msg_txt = "I sent a photo"
+            msg_txt = "I sent a sticker" if photo_base64['mime'] == "image/webp" else "I sent a photo"
 
         main_text = f"Message from person {username} from {chat_name}: {msg_txt}"
 

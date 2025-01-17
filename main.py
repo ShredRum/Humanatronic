@@ -5,7 +5,7 @@ import random
 import time
 import traceback
 
-from aiogram import types, Bot, Dispatcher
+from aiogram import types, Bot, Dispatcher, exceptions
 from aiogram.filters.command import Command
 
 import uni_core
@@ -44,6 +44,27 @@ async def start(message: types.Message):
 
 @dp.message(lambda message: utils.check_names(message, config.my_id, config.prompts))
 async def chatgpt(message: types.Message):
+
+    async def message_reply(parse=None):
+        try:
+            await message.reply(first_msg, allow_sending_without_reply=True, parse_mode=parse)
+        except exceptions.TelegramBadRequest as exc:
+            if "can't parse entities" in str(exc):
+                logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
+                await message_reply()  # Вторая попытка без маркдавуна
+            else:
+                logging.error(traceback.format_exc())
+
+    async def send_message(parse=None):
+        try:
+            await bot.send_message(message.chat.id, paragraph, thread_id, parse_mode=parse)
+        except exceptions.TelegramBadRequest as exc:
+            if "can't parse entities" in str(exc):
+                logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
+                await send_message()
+            else:
+                logging.error(traceback.format_exc())
+
     if not await utils.check_whitelist(message, config):
         return
 
@@ -76,21 +97,25 @@ async def chatgpt(message: types.Message):
         if message.reply_to_message.text or message.reply_to_message.caption:
             reply_msg = message.reply_to_message.text or message.reply_to_message.caption
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
+    parse_mode = 'markdown' if config.markdown_enable else None
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    answer = (await dialogs.get(context).get_answer(message, reply_msg, photo_base64)).split("\n\n")
-    await message.reply(answer[0], allow_sending_without_reply=True)
+    answer = await dialogs.get(context).get_answer(message, reply_msg, photo_base64)
+    first_msg = answer.split("\n\n")[0] if config.split_paragraphs else answer
+    await message_reply(parse=parse_mode)
+    answer = answer.split("\n\n")[1::]
     thread_id = message.message_thread_id if message.is_topic_message else None
-    for paragraph in answer[1::]:
+    for paragraph in answer:
         await asyncio.sleep(5)
         await bot.send_chat_action(chat_id=message.chat.id, action='typing')
         await asyncio.sleep(5)
-        await bot.send_message(message.chat.id, paragraph, thread_id)
+        await send_message(parse=parse_mode)
 
 
 async def main() -> None:
     config.my_id = (await bot.get_me()).id
     await dp.start_polling(bot)
 
+
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.2.1 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.3 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())

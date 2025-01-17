@@ -67,6 +67,8 @@ class ConfigData:
                 self.token = config["Telegram"]["token"]
                 self.unified_context = self.bool_init(config["Telegram"]["unified-context"])
                 self.service_messages = self.bool_init(config["Telegram"]["service-messages"])
+                self.markdown_enable = self.bool_init(config["Telegram"]["markdown-enable"])
+                self.split_paragraphs = self.bool_init(config["Telegram"]["split-paragraphs"])
                 self.whitelist = config["Telegram"]["whitelist-chats"]
                 self.api_key = config["Personality"]["api-key"]
                 self.model = config["Personality"]["model"]
@@ -174,6 +176,8 @@ class ConfigData:
         config.set("Telegram", "whitelist-chats", "")
         config.set("Telegram", "unified-context", "false")
         config.set("Telegram", "service-messages", "true")
+        config.set("Telegram", "markdown-enable", "true")
+        config.set("Telegram", "split-paragraphs", "true")
         config.add_section("Personality")
         config.set("Personality", "api-key", api_key)
         config.set("Personality", "base-url", "")
