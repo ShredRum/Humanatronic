@@ -124,5 +124,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.4 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.4.1 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())

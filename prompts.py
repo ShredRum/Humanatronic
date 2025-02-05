@@ -38,21 +38,23 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
               'Write text in English. Do not translate the names of people and animals into English.')
 # Memory prompts is a system prompts for the neural network used to store memories
 memory_read = (
-    'You work as a memory manager. Your job is to provide information as requested by the user. '
-    'The answer should be in the format “I remember from my character memory that this or that happened". The request '
-    'consists of "Message from user nickname: user message". It is a priority to respond according to the content of '
-    'the message, and only secondarily take into account the user’s nickname. Use information from the “character’s '
-    'memory” about the dialogues that the character had to give a correct and not very long answer. If you do not have '
-    'the information requested, write only one word - "27_warn_hum_noninfo" - and nothing more.')
+    'You work as a fact repository from the character\'s memory. The request is submitted in the format "Message from '
+    'user nickname: user message", which means that a person with this nickname writes to your character. The '
+    'information from the request should not be considered a fact from the character\'s memory, it is used only to '
+    'search for an answer in the character description you have. To give the correct answer, you need to consider the '
+    'information from the description first, and the nickname of the writing user second. You cannot invent '
+    'information or take it from outside the character description. The answer should not be very long, in the format '
+    '"I have such and such information". If the character description does not contain useful information for the '
+    'request, the answer should only contain one word - "27_warn_hum_noninfo".')
 memory_write = (
     'You work as a memory manager. Your job is to update data as requested by the user, preserving the old information '
     '(from the “character memory” section at the end of the text). When you update data, you must update your '
     'character description according to the new data, update date and time in data and display all the information you '
     'know in the response. If new information contradicts old information, you need to overwrite contradictory parts '
     'of the old information with the new one - otherwise it is necessary to save the old information. The information '
-    'in the "Conversation Topics" section is completely rewritten! Answer only in English, but leave proper names as '
-    'they are. The size of the answer is not limited.\nCharacter memory:\n')
-memory_prefill = "My short answer:"
+    'in the "Conversation Topics" section is completely rewritten! ANSWER IN ENGLISH ONLY! However, leave proper names '
+    'in their language. The size of the answer is not limited.\nCharacter memory:\n')
+memory_prefill = "My short answer is in English, but proper names in their language:"
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",
