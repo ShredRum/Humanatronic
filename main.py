@@ -45,23 +45,16 @@ async def start(message: types.Message):
 @dp.message(lambda message: utils.check_names(message, config.my_id, config.prompts))
 async def chatgpt(message: types.Message):
 
-    async def message_reply(parse=None):
+    async def send_message(text, parse=None, reply=False):
         try:
-            await message.reply(first_msg, allow_sending_without_reply=True, parse_mode=parse)
-        except exceptions.TelegramBadRequest as exc:
-            if "can't parse entities" in str(exc):
-                logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
-                await message_reply()  # Вторая попытка без маркдавуна
+            if reply:
+                await message.reply(text, allow_sending_without_reply=True, parse_mode=parse)
             else:
-                logging.error(traceback.format_exc())
-
-    async def send_message(parse=None):
-        try:
-            await bot.send_message(message.chat.id, paragraph, thread_id, parse_mode=parse)
+                await bot.send_message(message.chat.id, text, thread_id, parse_mode=parse)
         except exceptions.TelegramBadRequest as exc:
             if "can't parse entities" in str(exc):
                 logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
-                await send_message()
+                await send_message(text, reply=reply)
             else:
                 logging.error(traceback.format_exc())
 
@@ -106,16 +99,14 @@ async def chatgpt(message: types.Message):
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     parse_mode = 'markdown' if config.markdown_enable else None
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    answer = await dialogs.get(context).get_answer(message, reply_msg, photo_base64)
-    first_msg = answer.split("\n\n")[0] if config.split_paragraphs else answer
-    await message_reply(parse=parse_mode)
-    answer = answer.split("\n\n")[1::]
+    answer = utils.answer_parser(await dialogs.get(context).get_answer(message, reply_msg, photo_base64), config)
+    await send_message(answer[0], parse=parse_mode, reply=True)
     thread_id = message.message_thread_id if message.is_topic_message else None
-    for paragraph in answer:
+    for paragraph in answer[1::]:
         await asyncio.sleep(5)
         await bot.send_chat_action(chat_id=message.chat.id, action='typing')
         await asyncio.sleep(5)
-        await send_message(parse=parse_mode)
+        await send_message(paragraph, parse=parse_mode)
 
 
 async def main() -> None:
@@ -124,5 +115,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.4.2 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.5 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())

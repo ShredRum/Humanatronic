@@ -70,6 +70,7 @@ class ConfigData:
                 self.markdown_enable = self.bool_init(config["Telegram"]["markdown-enable"])
                 self.split_paragraphs = self.bool_init(config["Telegram"]["split-paragraphs"])
                 self.reply_to_quotes = self.bool_init(config["Telegram"]["reply-to-quotes"])
+                self.max_answer_len = int(config["Telegram"]["max-answer-len"])
                 self.whitelist = config["Telegram"]["whitelist-chats"]
                 self.api_key = config["Personality"]["api-key"]
                 self.model = config["Personality"]["model"]
@@ -180,6 +181,7 @@ class ConfigData:
         config.set("Telegram", "markdown-enable", "true")
         config.set("Telegram", "split-paragraphs", "true")
         config.set("Telegram", "reply-to-quotes", "true")
+        config.set("Telegram", "max-answer-len", "2000")
         config.add_section("Personality")
         config.set("Personality", "api-key", api_key)
         config.set("Personality", "base-url", "")
@@ -310,3 +312,36 @@ async def check_whitelist(message: types.Message, config):
 def get_image_width(photo_base64):
     width, _ = Image.open(BytesIO(base64.b64decode(photo_base64.split("base64,")[-1]))).size
     return width
+
+
+def message_len_parser(text, config):
+    max_len = config.max_answer_len
+
+    while len(text) > max_len:
+        parsed = False
+        for index in range(max_len, 1, -1):
+            if text[index] == " " and text[index - 1] in ".!?":
+                yield text[:index]
+                text = text[index + 1:]
+                parsed = True
+                break
+        if parsed:
+            continue
+        for index in range(max_len, 1, -1):
+            if text[index] == " ":
+                yield text[:index]
+                text = text[index + 1:]
+                parsed = True
+                break
+        if parsed:
+            continue
+        yield text[:max_len]
+        text = text[max_len:]
+    yield text
+
+def answer_parser(text, config) -> list:
+    answer = text.split("\n\n") if config.split_paragraphs else [text]
+    split_answer = []
+    for answer_part in answer:
+        split_answer.extend([parsed_txt for parsed_txt in message_len_parser(answer_part, config)])
+    return split_answer
