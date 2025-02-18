@@ -41,7 +41,7 @@ class ConfigData:
                 logging.StreamHandler(sys.stdout)
             ],
             force=True,
-            level=logging.DEBUG,
+            level=logging.INFO,
             format='%(asctime)s %(levelname)s: %(message)s',
             datefmt="%d-%m-%Y %H:%M:%S")
 
