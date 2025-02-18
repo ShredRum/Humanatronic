@@ -78,10 +78,10 @@ async def chatgpt(message: types.Message):
     if (message.photo is not None or message.sticker is not None) and config.vision:
         try:
             if message.photo:
-                byte_file = await bot.download(message.photo[-1])
+                byte_file = await bot.download(message.photo[-1].file_id)
                 mime = "image/jpeg"
             else:
-                byte_file = await bot.download(message.sticker.thumbnail)
+                byte_file = await bot.download(message.sticker.thumbnail.file_id)
                 mime = "image/webp"
             # noinspection PyUnresolvedReferences
             photo_base64 = {"data": base64.b64encode(byte_file.getvalue()).decode('utf-8'), "mime": mime}
@@ -124,5 +124,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.4.1 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.4.2 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
