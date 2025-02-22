@@ -42,7 +42,7 @@ async def start(message: types.Message):
         await message.reply("Я не бот, я живой человек! Не забывай об этом во время разговора со мной!")
 
 
-@dp.message(lambda message: utils.check_names(message, config.my_id, config.prompts))
+@dp.message(lambda message: utils.check_names(message, config.my_id, config.prompts, config.my_username))
 async def chatgpt(message: types.Message):
 
     async def send_message(text, parse=None, reply=False):
@@ -112,10 +112,12 @@ async def chatgpt(message: types.Message):
 
 
 async def main() -> None:
-    config.my_id = (await bot.get_me()).id
+    get_me = await bot.get_me()
+    config.my_id = get_me.id
+    config.my_username = f"@{get_me.username}"
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.5.1 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.5.2 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())

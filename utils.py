@@ -18,6 +18,7 @@ from aiogram import types
 class ConfigData:
     path = ""
     my_id = ""
+    my_username = ""
     api_queue: BoundedSemaphore
 
     def __init__(self):
@@ -236,12 +237,13 @@ class ConfigData:
             raise TypeError
 
 
-def check_names(message, bot_id, prompts):
+def check_names(message, bot_id, prompts, my_username):
     """
     The bot will only respond if called by name (if it's public chat)
     :param message:
     :param bot_id:
     :param prompts:
+    :param my_username:
     :return:
     """
 
@@ -255,6 +257,8 @@ def check_names(message, bot_id, prompts):
     msg_txt = message.text or message.caption
     if msg_txt is None:
         return False
+    if my_username in msg_txt:
+        return True
     msg_txt = re.sub(r'[^\w\s]', '', msg_txt.lower()).split()
     for name in prompts.names:
         if name.lower() in msg_txt:
