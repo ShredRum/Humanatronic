@@ -52,7 +52,9 @@ async def chatgpt(message: types.Message):
             else:
                 await bot.send_message(message.chat.id, text, thread_id, parse_mode=parse)
         except exceptions.TelegramBadRequest as exc:
-            if "can't parse entities" in str(exc):
+            if "text must be non-empty" in str(exc):
+                await send_message("⠀", reply=reply)
+            elif "can't parse entities" in str(exc):
                 logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
                 await send_message(text, reply=reply)
             else:

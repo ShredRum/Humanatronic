@@ -340,8 +340,6 @@ def message_len_parser(text, config):
     yield text
 
 def answer_parser(text, config) -> list:
-    if not text:
-        return ["⠀"] # Easter egg for empty message in Telegram
     answer = text.split("\n\n") if config.split_paragraphs else [text]
     split_answer = []
     for answer_part in answer:
