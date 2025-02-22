@@ -56,7 +56,7 @@ async def chatgpt(message: types.Message):
                 logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
                 await send_message(text, reply=reply)
             elif "text must be non-empty" in str(exc) and len(answer) == 1:
-                await send_message("⠀", reply=reply)
+                await send_message("ᅠ ", reply=reply)
             else:
                 logging.error(traceback.format_exc())
 
