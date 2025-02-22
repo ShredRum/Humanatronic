@@ -316,8 +316,6 @@ def get_image_width(photo_base64):
 
 def message_len_parser(text, config):
     max_len = config.max_answer_len
-    if not text:
-        return "ᅠ" # Easter egg for empty message in Telegram
 
     while len(text) > max_len:
         parsed = False
@@ -342,6 +340,8 @@ def message_len_parser(text, config):
     yield text
 
 def answer_parser(text, config) -> list:
+    if not text:
+        return ["ᅠ"] # Easter egg for empty message in Telegram
     answer = text.split("\n\n") if config.split_paragraphs else [text]
     split_answer = []
     for answer_part in answer:
