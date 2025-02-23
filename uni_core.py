@@ -1,10 +1,10 @@
-# from dotenv import load_dotenv
 import json
 import logging
 import random
 import asyncio
 import time
 import traceback
+from typing import Optional
 
 import anthropic
 import openai
@@ -60,7 +60,7 @@ class Dialog:
         if "html>" not in exc_text:
             return exc_text
         text_converter = html2text.HTML2Text()
-        # Отключаем обрамление ссылок символом *
+        # Disable framing of links with the * symbol
         text_converter.ignore_links = True
         return text_converter.handle(exc_text)
 
@@ -212,20 +212,18 @@ class Dialog:
                     {"url": f"data:{photo_base64['mime']};base64,{photo_base64['data']}"}},
                 {"type": "text", "text": prompt}]
 
-    async def get_answer(self, message, reply_msg, photo_base64):
+    async def get_answer(self, message, reply_msg: Optional[dict], photo_base64):
         username = utils.username_parser(message)
-        chat_name = f"{username}'s private messages" if message.chat.title is None else f'chat {message.chat.title}'
-        if reply_msg:
-            if self.dialog_history[-1]['content'] == reply_msg:
-                reply_msg = ""
-            else:
-                reply_msg = f'In response to the message "{reply_msg}"\n'
+        chat_name = f"Private messages" if message.chat.title is None else f'chat {message.chat.title}'
+        reply_msg_text = ""
+        if reply_msg and not self.dialog_history[-1]['content'] == reply_msg["text"]:
+            reply_msg_text = f'Previous message ({reply_msg["name"]}): "{reply_msg["text"]}"\n'
 
-        msg_txt = message.text or message.caption
+        msg_txt = message.text or message.caption or utils.get_poll_text(message)
         if msg_txt is None:
             msg_txt = "I sent a sticker" if photo_base64['mime'] == "image/webp" else "I sent a photo"
 
-        main_text = f"Message from person {username} from {chat_name}: {msg_txt}"
+        main_text = f"Chat: {chat_name}\nMessage ({username}): {msg_txt}"
 
         dialog_buffer = self.dialog_history.copy()
         summarizer_used = False
@@ -237,9 +235,9 @@ class Dialog:
 
         memory_result = ""
         if self.memory_dump:
-            request_to_memory = f'Message from user {username}: {msg_txt}'
+            request_to_memory = f'Message ({username}): {msg_txt}'
             if reply_msg:
-                request_to_memory = f'{reply_msg}{request_to_memory}'
+                request_to_memory = f'{reply_msg_text}{request_to_memory}'
             try:
                 sys_mem_prompt = f'{self.config.prompts.memory_read}'
                 mem_request = [{"role": "user",
@@ -260,8 +258,8 @@ class Dialog:
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
                 if self.config.full_debug:
-                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY REQUEST--\n\n{sys_mem_prompt}\n\n{mem_request}"
-                                  f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY REQUEST--")
+                    logging.info(f"--FULL DEBUG INFO FOR MEMORY REQUEST--\n\n{sys_mem_prompt}\n\n{mem_request}"
+                                 f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY REQUEST--")
                 if "27_warn_hum_noninfo" not in answer:  # If memory has no information, we filter it out completely
                     memory_result = f"Memory: {answer}\n"
                 logging.info(f"Memory usage spent {total_tokens} tokens")
@@ -276,7 +274,7 @@ class Dialog:
                 ]):
             current_time = f"{utils.current_time_info(self.config)}\n"
             logging.info(f"Time updated for dialogue in {chat_name}")
-        prompt = f'{current_time}{memory_result}{reply_msg}{main_text}'
+        prompt = f'{current_time}{memory_result}{reply_msg_text}{main_text}'
         if photo_base64:
             dialog_buffer.append({"role": "user", "content": self.get_image_context(photo_base64, prompt)})
         else:
@@ -298,8 +296,8 @@ class Dialog:
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
             if self.config.full_debug:
-                logging.debug(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{self.system}\n\n{dialog_buffer}"
-                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR API REQUEST--")
+                logging.info(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{self.system}\n\n{dialog_buffer}"
+                             f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR API REQUEST--")
         except ApiRequestException:
             return random.choice(self.config.prompts.errors)
 
@@ -309,7 +307,7 @@ class Dialog:
             summarizer_used = True
             await self.dialogue_locker.acquire()
             self.dialogue_locker.release()
-        prompt = f'{current_time}{reply_msg}{main_text}'
+        prompt = f'{current_time}{reply_msg_text}{main_text}'
         if photo_base64:
             self.dialog_history.extend([{"role": "user", "content": self.get_image_context(photo_base64, prompt)},
                                         {"role": "assistant", "content": answer}])

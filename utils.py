@@ -10,6 +10,8 @@ import time
 import traceback
 from importlib import reload
 from io import BytesIO
+from typing import Optional
+
 from PIL import Image
 
 from aiogram import types
@@ -247,7 +249,7 @@ def check_names(message, bot_id, prompts, my_username):
     :return:
     """
 
-    if all([message.text is None, message.photo is None, message.sticker is None]):
+    if not any([message.text, message.caption, message.photo, message.sticker, message.poll]):
         return False
     if message.chat.id == message.from_user.id:
         return True
@@ -343,7 +345,6 @@ def message_len_parser(text, config, fn_list):
 
 
 def answer_parser(text, config) -> list:
-
     def lines_parser(txt, index):
         return txt[index] == "\n"
 
@@ -360,3 +361,27 @@ def answer_parser(text, config) -> list:
     for answer_part in answer:
         split_answer.extend([parsed_txt for parsed_txt in message_len_parser(answer_part, config, fn_list)])
     return split_answer
+
+
+async def get_image_from_message(message, bot) -> Optional[dict]:
+    if not message:
+        return
+    elif message.photo:
+        byte_file = await bot.download(message.photo[-1].file_id)
+        mime = "image/jpeg"
+    elif message.sticker:
+        byte_file = await bot.download(message.sticker.thumbnail.file_id)
+        mime = "image/webp"
+    else:
+        return
+    # noinspection PyUnresolvedReferences
+    return {"data": base64.b64encode(byte_file.getvalue()).decode('utf-8'), "mime": mime}
+
+
+def get_poll_text(message):
+    if not message.poll:
+        return
+    poll_text = message.poll.question + "\n\n"
+    for option in message.poll.options:
+        poll_text += "☑️ " + option.text + "\n"
+    return poll_text

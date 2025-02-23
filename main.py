@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import logging
 import random
 import time
@@ -63,27 +62,21 @@ async def chatgpt(message: types.Message):
     if not await utils.check_whitelist(message, config):
         return
 
-    if message.text is None and message.caption is None and not config.vision:
+    if not any([message.text, message.caption, config.vision]):
         return
 
     if message.quote and not config.reply_to_quotes:
         return
 
     photo_base64 = None
-    if (message.photo is not None or message.sticker is not None) and config.vision:
-        try:
-            if message.photo:
-                byte_file = await bot.download(message.photo[-1].file_id)
-                mime = "image/jpeg"
-            else:
-                byte_file = await bot.download(message.sticker.thumbnail.file_id)
-                mime = "image/webp"
-            # noinspection PyUnresolvedReferences
-            photo_base64 = {"data": base64.b64encode(byte_file.getvalue()).decode('utf-8'), "mime": mime}
-        except Exception as e:
-            logging.error(f"{e}\n{traceback.format_exc()}")
-            await message.reply(random.choice(config.prompts.errors))
-            return
+    try:
+        if config.vision:
+            photo_base64 = (await utils.get_image_from_message(message, bot) or
+                            await utils.get_image_from_message(message.reply_to_message, bot))
+    except Exception as e:
+        logging.error(f"{e}\n{traceback.format_exc()}")
+        await message.reply(random.choice(config.prompts.errors))
+        return
 
     context = message.chat.id if not config.unified_context else 0
     if dialogs.get(context) is None:
@@ -91,12 +84,16 @@ async def chatgpt(message: types.Message):
     if is_flooded(message):
         return
 
-    reply_msg = ""
+    reply_msg = None
     if message.reply_to_message:
         if message.quote:
             reply_msg = message.quote.text
-        elif message.reply_to_message.text or message.reply_to_message.caption:
-            reply_msg = message.reply_to_message.text or message.reply_to_message.caption
+        elif any([message.reply_to_message.text, message.reply_to_message.caption,
+                  utils.get_poll_text(message.reply_to_message)]):
+            reply_msg = (message.reply_to_message.text
+                         or message.reply_to_message.caption
+                         or utils.get_poll_text(message.reply_to_message))
+        reply_msg = {"name": utils.username_parser(message.reply_to_message), "text": reply_msg}
 
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     parse_mode = 'markdown' if config.markdown_enable else None
@@ -111,13 +108,13 @@ async def chatgpt(message: types.Message):
         await send_message(paragraph, parse=parse_mode)
 
 
-async def main() -> None:
+async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
+    logging.info("###HUMANOTRONIC v4.6 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    logging.info("###HUMANOTRONIC v4.5.3 (Dualcore) LAUNCHED SUCCESSFULLY###")
     asyncio.run(main())
