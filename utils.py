@@ -318,34 +318,45 @@ def get_image_width(photo_base64):
     return width
 
 
-def message_len_parser(text, config):
+def message_len_parser(text, config, fn_list):
     max_len = config.max_answer_len
 
     while len(text) > max_len:
+
         parsed = False
-        for index in range(max_len, 1, -1):
-            if text[index] == " " and text[index - 1] in ".!?":
-                yield text[:index]
-                text = text[index + 1:]
-                parsed = True
-                break
-        if parsed:
-            continue
-        for index in range(max_len, 1, -1):
-            if text[index] == " ":
-                yield text[:index]
-                text = text[index + 1:]
-                parsed = True
+
+        for parse_fn in fn_list:
+            for index in range(max_len, 1, -1):
+                if parse_fn(text, index):
+                    yield text[:index]
+                    text = text[index + 1:]
+                    parsed = True
+                    break
+            if parsed:
                 break
         if parsed:
             continue
         yield text[:max_len]
         text = text[max_len:]
+
     yield text
 
+
 def answer_parser(text, config) -> list:
+
+    def lines_parser(txt, index):
+        return txt[index] == "\n"
+
+    def sentences_parser(txt, index):
+        return txt[index] == " " and txt[index - 1] in ".!?"
+
+    def space_parser(txt, index):
+        return txt[index] == " "
+
+    fn_list = (lines_parser, sentences_parser, space_parser)
+
     answer = text.split("\n\n") if config.split_paragraphs else [text]
     split_answer = []
     for answer_part in answer:
-        split_answer.extend([parsed_txt for parsed_txt in message_len_parser(answer_part, config)])
+        split_answer.extend([parsed_txt for parsed_txt in message_len_parser(answer_part, config, fn_list)])
     return split_answer
