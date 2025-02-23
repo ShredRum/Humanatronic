@@ -1,3 +1,4 @@
+import random
 from threading import BoundedSemaphore
 import base64
 import configparser
@@ -74,6 +75,8 @@ class ConfigData:
                 self.split_paragraphs = self.bool_init(config["Telegram"]["split-paragraphs"])
                 self.reply_to_quotes = self.bool_init(config["Telegram"]["reply-to-quotes"])
                 self.max_answer_len = int(config["Telegram"]["max-answer-len"])
+                self.random_response_probability = float(config["Telegram"]["random-response-probability"]
+                                                         .replace(',', "."))
                 self.whitelist = config["Telegram"]["whitelist-chats"]
                 self.api_key = config["Personality"]["api-key"]
                 self.model = config["Personality"]["model"]
@@ -185,6 +188,7 @@ class ConfigData:
         config.set("Telegram", "split-paragraphs", "true")
         config.set("Telegram", "reply-to-quotes", "true")
         config.set("Telegram", "max-answer-len", "2000")
+        config.set("Telegram", "random-response-probability", "0.01")
         config.add_section("Personality")
         config.set("Personality", "api-key", api_key)
         config.set("Personality", "base-url", "")
@@ -239,13 +243,11 @@ class ConfigData:
             raise TypeError
 
 
-def check_names(message, bot_id, prompts, my_username):
+def check_names(message, config):
     """
     The bot will only respond if called by name (if it's public chat)
     :param message:
-    :param bot_id:
-    :param prompts:
-    :param my_username:
+    :param config:
     :return:
     """
 
@@ -254,17 +256,19 @@ def check_names(message, bot_id, prompts, my_username):
     if message.chat.id == message.from_user.id:
         return True
     if message.reply_to_message:
-        if message.reply_to_message.from_user.id == bot_id:
+        if message.reply_to_message.from_user.id == config.bot_id:
             return True
     msg_txt = message.text or message.caption
     if msg_txt is None:
         return False
-    if my_username in msg_txt:
+    if config.my_username in msg_txt:
         return True
     msg_txt = re.sub(r'[^\w\s]', '', msg_txt.lower()).split()
-    for name in prompts.names:
+    for name in config.prompts.names:
         if name.lower() in msg_txt:
             return True
+    if random.random() < config.random_response_probability:
+        return True
     return False
 
 
