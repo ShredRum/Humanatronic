@@ -256,7 +256,7 @@ def check_names(message, config):
     if message.chat.id == message.from_user.id:
         return True
     if message.reply_to_message:
-        if message.reply_to_message.from_user.id == config.bot_id:
+        if message.reply_to_message.from_user.id == config.my_id:
             return True
     msg_txt = message.text or message.caption
     if msg_txt is None:
