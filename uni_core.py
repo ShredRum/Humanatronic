@@ -69,12 +69,16 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                attempts=3):
+                                attempts=3,
+                                prefill=None):
 
         if system:
             system = [{"role": "system", "content": system}]
             system.extend(messages)
             messages = system
+
+        if prefill:
+            messages.append({"role": "assistant", "content": prefill})
 
         queue.acquire()
         for _ in range(attempts):
@@ -195,9 +199,6 @@ class Dialog:
         else:
             client = self.client
             queue = self.config.api_queue
-        if vendor == 'anthropic':
-            return self.send_api_request_claude(client, queue, *args)
-        args = args[:-1]  # I hope someday I will remove these wildly ugly crutches from the code...
         return self.send_api_request_openai(client, queue, *args)
 
     def get_image_context(self, photo_base64, prompt):
