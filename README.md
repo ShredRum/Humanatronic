@@ -38,6 +38,8 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 12. memory-dump-size - the number of characters limiting the size of the memory dump, use in the "summarizer" prompt parameter using quotation marks {}. Deprecated parameter.
 13. vision - if True, the bot will be able to recognize images and stickers (requires support for the used API, must be disabled for the first launch after switching the "model-vendor" parameter)
 14. full-debug - the bot saves ALL service information to the logs (request data, API responses, full text of errors that occur), used to debug its operation. It is not recommended to enable it on a permanent basis.
+## Section [Memory]
+The items in the memory level neural network settings correspond to the items in the personality neural network settings, but there you can use another, faster and cheaper neural network, another API, etc.
 # Descriptions of prompts in the prompts.py file
 1. names - a Python list of nicknames that the bot responds to. The public @-name does not need to be specified in the list. Does not take into account the word cases.
 2. start - a basic description of your character that you can freely edit.
