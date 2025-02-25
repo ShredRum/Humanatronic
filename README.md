@@ -1,13 +1,13 @@
 # Humanotronic
 ChatGPT-based bot code that imitates a personality, knows the current date and time and the names of those who write to it, remembers events in permanent memory.
 # Main features of the bot
-1. OpenAI and Anthropic API support out of the box (Gemini is planned, if necessary, we can provide an HTML wrapper that converts OpenAI requests to Gemini)
-2. Transferring the current date and time to the bot at a certain frequency
-3. Transferring the chat name and speaker's nickname to the bot
-4. Vision support for all API types
-5. Convenient work with several characters
-6. The bot uses a two-layer structure "character neural network" - "memory neural network", which allows it to store information from the dialogue longer
-7. A ready-made example of a prompt for the convenience of the first launch
+* OpenAI and Anthropic API support out of the box (Gemini is planned, if necessary, we can provide an HTML wrapper that converts OpenAI requests to Gemini)
+* Transferring the current date and time to the bot at a certain frequency
+* Transferring the chat name and speaker's nickname to the bot
+* Vision support for all API types
+* Convenient work with several characters
+* The bot uses a two-layer structure "character neural network" - "memory neural network", which allows it to store information from the dialogue longer
+* A ready-made example of a prompt for the convenience of the first launch
 # How to launch a bot?
 1. Download the attached files to a separate folder
 2. (Recommended) Create a separate Python virtual environment and activate it
@@ -38,3 +38,13 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 12. memory-dump-size - the number of characters limiting the size of the memory dump, use in the "summarizer" prompt parameter using quotation marks {}. Deprecated parameter.
 13. vision - if True, the bot will be able to recognize images and stickers (requires support for the used API, must be disabled for the first launch after switching the "model-vendor" parameter)
 14. full-debug - the bot saves ALL service information to the logs (request data, API responses, full text of errors that occur), used to debug its operation. It is not recommended to enable it on a permanent basis.
+# Descriptions of prompts in the prompts.py file
+1. names - a Python list of nicknames that the bot responds to. The public @-name does not need to be specified in the list. Does not take into account the word cases.
+2. start - a basic description of your character that you can freely edit.
+3. hard - additional service information that is not recommended to be edited unless you know what you are doing. The system prompt for the bot is sent as "start + hard".
+4. prefill - prefills the response that will be sent by the bot. Officially supported by Anthropic (see https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/prefill-claudes-response), and actually works with OpenAI as well. It is recommended to use it to, for example, control the language of the message sent by the bot or its length (the system prompt may not always be effective in the context of an ever-growing context).
+5. summarizer - an instruction for compressing the context using a "lazy summarizer". It is recommended to leave it "as is".
+6. memory_read - an instruction for getting data from memory using a memory-level neural network. It is recommended to leave it "as is".
+7. memory_write - instruction for merging the new "memory dump" obtained during the "lazy summerizer" operation with the old one. It is recommended to leave "as is".
+8. memory_prefill - prefills the response for the memory-level neural network. It is recommended to leave "as is".
+9. errors - a Python list of aphorisms that are sent to the user in response in case of errors in the bot's operation.
