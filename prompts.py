@@ -23,7 +23,8 @@ hard = (
     'we are communicating\nMessage (Nickname): Current message from the person with the specified nickname.\nEND OF '
     'SERVICE FIELDS.\nService fields and their contents MUST NOT be quoted in your response.'
     '\nYou start a dialogue in Russian!')
-# The prefill is used only for Anthropic engines, it is added at the beginning of the bot's response
+# The prefill starts the bot's response, it is used to remind important instructions in each request.
+# Can be left blank, but it is not recommended to change the default settings.
 prefill = "Мой не очень длинный ответ, как сообщение в мессенджере:"
 # Summarizer is a prompt used to compress the previous dialog
 summarizer = ('Now you must create a “memory dump” - a text that will help you save information about your '
@@ -46,7 +47,8 @@ memory_read = (
     'you need to consider the information from the description first, and the nickname of the writing user second. '
     'You cannot invent information or take it from outside the character description. The answer should not be very '
     'long, in the format "I have information that...". If the character description does not contain useful '
-    'information for the request, the answer should only contain one word - "27_warn_hum_noninfo".')
+    'information for the request, the answer should only contain one word - "27_warn_hum_noninfo". It is STRICTLY '
+    'FORBIDDEN to write that you cannot see the images.')
 memory_write = (
     'You work as a memory manager. Your job is to update data as requested by the user, preserving the old information '
     '(from the “character memory” section at the end of the text). When you update data, you must update your '
