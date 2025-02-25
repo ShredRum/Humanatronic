@@ -31,6 +31,7 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 6. split-paragraphs - if True, the bot will send text separated by "\n\n" as separate messages.
 7. reply-to-quotes - if True, you can quote text from messages (including bot messages) as a replay, and the bot will respond to them, taking into account the quoted text and the text of the main message. If False, the bot will completely ignore the message with the quote.
 8. max-answer-len - the maximum length of a message sent in Telegram. If the message is longer, it is automatically divided into parts using a smart parser (at each stage, it tries to divide the message by line breaks, then by sentences, then by words, then by symbols, moving on to a rougher version if the previous one fails). Setting a value greater than 4096 may cause the bot to malfunction when sending messages that are too long.
+9. random-response-probability - probability in float with which the bot will respond to a message in public chat that was not addressed to it (where 1 => 100%, 0 => never, 0.01 => 1%, etc.)
 ## Section [Personality]
 1. api-key - key for accessing OpenAI/Anthropic API
 2. base-url - URL where OpenAI/Anthropic API requests are sent (empty by default)
