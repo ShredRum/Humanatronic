@@ -1,5 +1,13 @@
 # Humanotronic
 ChatGPT-based bot code that imitates a personality, knows the current date and time and the names of those who write to it, remembers events in permanent memory.
+# Main features of the bot
+1. OpenAI and Anthropic API support out of the box (Gemini is planned, if necessary, we can provide an HTML wrapper that converts OpenAI requests to Gemini)
+2. Transferring the current date and time to the bot at a certain frequency
+3. Transferring the chat name and speaker's nickname to the bot
+4. Vision support for all API types
+5. Convenient work with several characters
+6. The bot uses a two-layer structure "character neural network" - "memory neural network", which allows it to store information from the dialogue longer
+7. A ready-made example of a prompt for the convenience of the first launch
 # How to launch a bot?
 1. Download the attached files to a separate folder
 2. (Recommended) Create a separate Python virtual environment and activate it
