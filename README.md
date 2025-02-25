@@ -8,6 +8,14 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 * Convenient work with several characters
 * The bot uses a two-layer structure "character neural network" - "memory neural network", which allows it to store information from the dialogue longer
 * A ready-made example of a prompt for the convenience of the first launch
+# How the "second layer of memory" mechanism works
+* As you know, it is impossible to fill the token window infinitely when working with OpenAI and Anthropic - sooner or later, as the history of dialogues grows, we will hit the token limit. In addition, the cost of each request and the load on the neural network's thought process grow linearly.
+* For the bot to work normally, the API used must be able to correctly return the number of tokens used in the request. Working with a maximum token window of less than 8000 has practically not been tested and is not recommended.
+* After the first launch, we wait until the cost of a single request exceeds the token threshold specified in the summarizer-limit parameter in config.ini.
+* Then we separate 70% of the dialogue volume and retell it using the neural network. The resulting text is called a "memory dump", and we transfer it to the data for the memory neural network. The remaining 30% of the dialogue remains in the main context. This algorithm is called a "lazy summarizer" because it does not lose the dialogue tail, which is necessary for normal communication with the bot.
+* Now, with each request to the main neural network, we first make a request to the memory neural network, and if some useful information is found in the "memory dump", it adds it to the text of the request to the main neural network.
+* This continues until we again reach the token threshold we specified. After that, we run the "lazy summarizer" algorithm again, and we ask the neural network to combine the resulting "memory dump" with the old "dump" while preserving the important information.
+* In theory, this algorithm can allow you to communicate with the bot indefinitely. A faster and cheaper memory network allows you to store large amounts of text information about the character and his communication. In theory, the algorithm can be improved, for example, by switching to RAG with the preservation of several "memory dumps". As neural networks improve, they will increasingly carefully select information to store truly important and relevant data in the character's memory, discarding insignificant details.
 # How to launch a bot?
 1. Download the attached files to a separate folder
 2. (Recommended) Create a separate Python virtual environment and activate it
