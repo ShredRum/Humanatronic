@@ -323,7 +323,7 @@ class Dialog:
             async with self.dialogue_locker:
                 await self.summarizer(chat_name)
         try:
-            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history))
+            self.sql_helper.dialog_update(self.context, json.dumps(self.dialog_history, ensure_ascii=False))
         except Exception as e:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
@@ -420,7 +420,7 @@ class Dialog:
                      f"{total_tokens} tokens were used")
         self.dialog_history = self.dialog_history[split::]
         try:
-            self.sql_helper.memory_update(self.context, json.dumps(self.memory_dump))
+            self.sql_helper.memory_update(self.context, json.dumps(self.memory_dump, ensure_ascii=False))
         except Exception as e:
             logging.error("Humanotronic was unable to save conversation information! Please check your database!")
             logging.error(f"{e}\n{traceback.format_exc()}")
