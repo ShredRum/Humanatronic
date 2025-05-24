@@ -388,7 +388,7 @@ class Dialog:
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
             if self.config.full_debug:
-                logging.debug(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING--\n\n{compressed_dialogue}"
+                logging.info(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING--\n\n{compressed_dialogue}"
                               f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR DIALOG COMPRESSING--")
             logging.info(f"{total_tokens} tokens were used to compress the dialogue")
 
@@ -404,7 +404,7 @@ class Dialog:
                         self.config.memory_stream_mode,
                         self.config.memory_attempts]
                 if self.config.full_debug:
-                    logging.debug(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{sys_mem_prompt}\n\n"
+                    logging.info(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{sys_mem_prompt}\n\n"
                                   f"{memory_dump_request}\n\n"
                                   f"{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--")
                 self.memory_dump, total_tokens = await asyncio.get_running_loop().run_in_executor(
