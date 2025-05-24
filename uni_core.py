@@ -199,6 +199,8 @@ class Dialog:
         else:
             client = self.client
             queue = self.config.api_queue
+        if vendor == anthropic:
+            return self.send_api_request_claude(client, queue, *args)
         return self.send_api_request_openai(client, queue, *args)
 
     def get_image_context(self, photo_base64, prompt):
@@ -397,7 +399,7 @@ class Dialog:
                                         "content": f'Update information on the following memory block:\n{answer}'}]
                 sys_mem_prompt = f'{self.config.prompts.memory_write}{self.memory_dump}'
                 args = ['memory',
-                        self.config.model,
+                        self.config.memory_model,
                         memory_dump_request,
                         self.config.memory_tokens_per_answer, sys_mem_prompt,
                         self.config.memory_temperature,
