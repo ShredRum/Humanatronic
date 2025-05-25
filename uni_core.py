@@ -287,6 +287,13 @@ class Dialog:
             summarizer_used = True
             await self.dialogue_locker.acquire()
             self.dialogue_locker.release()
+        if self.config.prompts.prefill:
+            if self.config.prefill_mode == 'assistant':
+                dialog_buffer.append({"role": "assistant", "content": self.config.prompts.prefill})
+            elif self.config.prefill_mode == 'pre-user':
+                dialog_buffer[-1]['content'] = f"{self.config.prompts.prefill}\n{dialog_buffer[-1]['content']}"
+            elif self.config.prefill_mode == 'post-user':
+                dialog_buffer[-1]['content'] = f"{dialog_buffer[-1]['content']}\n{self.config.prompts.prefill}"
         try:
             args = ['personality',
                     self.config.model,
@@ -294,8 +301,7 @@ class Dialog:
                     self.config.tokens_per_answer, self.system,
                     self.config.temperature,
                     self.config.stream_mode,
-                    self.config.attempts,
-                    self.config.prompts.prefill]
+                    self.config.attempts]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
             if self.config.full_debug:

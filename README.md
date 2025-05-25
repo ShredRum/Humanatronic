@@ -48,6 +48,11 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 13. vision - if True, the bot will be able to recognize images and stickers (requires support for the used API, must be disabled for the first launch after switching the "model-vendor" parameter)
 14. full-debug - the bot saves ALL service information to the logs (request data, API responses, full text of errors that occur), used to debug its operation. It is not recommended to enable it on a permanent basis.
 15. summarizer-engine - determines whether the summarizing mechanism uses the main neural network with its settings or the memory neural network. The value can be changed if the main neural network is not suitable for summarizing due to technical limitations.
+16. prefill-mode - describes how the prefill will work in a dialogue with the bot
+- assistant - the prefill will be added to the assistant role after the message that the user sends to the bot. The standard scheme for Anthropic, see https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/prefill-claudes-response. When used with the OpenAI API, it may give an unpredictable result.
+- pre-user - the prefill is added to the very beginning of the text that is sent to the neural network from the user (in addition to the request text from the user, there is a lot of service information)
+- post-user - the prefill is added to the end of the text that is sent to the neural network from the user
+You can use full-debug to better understand how service information and prefills work in Humanotronic.
 ## Section [Memory]
 The items in the memory level neural network settings correspond to the items in the personality neural network settings, but there you can use another, faster and cheaper neural network, another API, etc.
 # Descriptions of prompts in the prompts.py file

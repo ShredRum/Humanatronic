@@ -91,6 +91,7 @@ class ConfigData:
                 self.full_debug = self.bool_init(config["Personality"]["full-debug"])
                 queue_size = int(config["Personality"]["queue-size"])
                 self.summarizer_engine = config["Personality"]["summarizer-engine"].lower()
+                self.prefill_mode = config["Personality"]["prefill-mode"].lower()
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
                 self.memory_model_vendor = config["Memory"]["model-vendor"].lower()
@@ -101,9 +102,12 @@ class ConfigData:
                 if self.model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The model vendor must be "openai" or "anthropic"')
                 if self.summarizer_engine not in ('personality', 'memory'):
-                    raise KeyError('The "summarizer_engine" parameter value can only be "personality" or "memory"')
+                    raise KeyError('The "summarizer-engine" parameter value can only be "personality" or "memory"')
                 if self.memory_model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The "memory" model vendor must be "openai" or "anthropic"')
+                if self.prefill_mode not in ('assistant', 'pre-user', 'post-user'):
+                    raise KeyError('The "prefill-mode" parameter value can only be '
+                                   '"assistant", "pre-user" or "post-user"')
                 break
             except Exception as e:
                 logging.error(str(e))
@@ -207,6 +211,7 @@ class ConfigData:
         config.set("Personality", "tokens-per-answer", "2000")
         config.set("Personality", "memory-dump-size", "2000")
         config.set("Personality", "summarizer-engine", "personality")
+        config.set("Personality", "prefill-mode", "assistant")
         if "vision" in model:
             config.set("Personality", "vision", "true")
         else:
