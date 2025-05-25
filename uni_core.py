@@ -199,7 +199,7 @@ class Dialog:
         else:
             client = self.client
             queue = self.config.api_queue
-        if vendor == anthropic:
+        if vendor == 'anthropic':
             return self.send_api_request_claude(client, queue, *args)
         return self.send_api_request_openai(client, queue, *args)
 
