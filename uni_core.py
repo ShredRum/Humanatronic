@@ -19,7 +19,7 @@ class ApiRequestException(Exception):
 
 class Dialog:
 
-    def __init__(self, config, sql_helper, context):
+    def __init__(self, config: utils.ConfigData, sql_helper, context):
         self.dialogue_locker = asyncio.Lock()
         self.config = config
         self.sql_helper = sql_helper
@@ -379,14 +379,30 @@ class Dialog:
 
         # When sending pictures to the summarizer, it does not work correctly, so we delete them
         compressed_dialogue = self.cleaning_images(compressed_dialogue)
+
+        if self.config.summarizer_engine == 'memory':
+            mode = 'memory'
+            model = self.config.memory_model
+            tokens_per_answer = self.config.memory_tokens_per_answer,
+            temperature = self.config.memory_temperature,
+            stream_mode = self.config.memory_stream_mode,
+            attempts = self.config.memory_attempts
+        else:
+            mode = 'personality'
+            model = self.config.model
+            tokens_per_answer = self.config.tokens_per_answer,
+            temperature = self.config.temperature,
+            stream_mode = self.config.stream_mode,
+            attempts = self.config.attempts
+
         try:
-            args = ['personality',
-                    self.config.model,
+            args = [mode,
+                    model,
                     compressed_dialogue,
-                    self.config.tokens_per_answer, None,
-                    self.config.temperature,
-                    self.config.stream_mode,
-                    self.config.attempts]
+                    tokens_per_answer, None,
+                    temperature,
+                    stream_mode,
+                    attempts]
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
             if self.config.full_debug:
@@ -398,13 +414,13 @@ class Dialog:
                 memory_dump_request = [{"role": "user",
                                         "content": f'Update information on the following memory block:\n{answer}'}]
                 sys_mem_prompt = f'{self.config.prompts.memory_write}{self.memory_dump}'
-                args = ['memory',
-                        self.config.memory_model,
+                args = [mode,
+                        model,
                         memory_dump_request,
-                        self.config.memory_tokens_per_answer, sys_mem_prompt,
-                        self.config.memory_temperature,
-                        self.config.memory_stream_mode,
-                        self.config.memory_attempts]
+                        tokens_per_answer, sys_mem_prompt,
+                        temperature,
+                        stream_mode,
+                        attempts]
                 if self.config.full_debug:
                     logging.info(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{sys_mem_prompt}\n\n"
                                   f"{memory_dump_request}\n\n"

@@ -90,6 +90,7 @@ class ConfigData:
                 self.attempts = int(config["Personality"]["gen-attempts"])
                 self.full_debug = self.bool_init(config["Personality"]["full-debug"])
                 queue_size = int(config["Personality"]["queue-size"])
+                self.summarizer_engine = config["Personality"]["summarizer-engine"]
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
                 self.memory_model_vendor = config["Memory"]["model-vendor"].lower()
@@ -99,6 +100,8 @@ class ConfigData:
                 memory_queue_size = int(config["Memory"]["queue-size"])
                 if self.model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The model vendor must be "openai" or "anthropic"')
+                if self.summarizer_engine not in ('personality', 'memory'):
+                    raise KeyError('The "summarizer_engine" parameter value can only be "personality" or "memory"')
                 if self.memory_model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The "memory" model vendor must be "openai" or "anthropic"')
                 break
@@ -200,17 +203,10 @@ class ConfigData:
         config.set("Personality", "gen-attempts", "3")
         config.set("Personality", "queue-size", "3")
         config.set("Personality", "full-debug", "false")
-        if any(["gpt-4" in model,
-                "claude" in model,
-                "16k" in model,
-                "32k" in model]):
-            config.set("Personality", "summarizer-limit", "6000")
-            config.set("Personality", "tokens-per-answer", "2000")
-            config.set("Personality", "memory-dump-size", "2000")
-        else:
-            config.set("Personality", "summarizer-limit", "2500")
-            config.set("Personality", "tokens-per-answer", "1000")
-            config.set("Personality", "memory-dump-size", "1000")
+        config.set("Personality", "summarizer-limit", "6000")
+        config.set("Personality", "tokens-per-answer", "2000")
+        config.set("Personality", "memory-dump-size", "2000")
+        config.set("Personality", "summarizer-engine", "personality")
         if "vision" in model:
             config.set("Personality", "vision", "true")
         else:
@@ -369,7 +365,7 @@ def answer_parser(text, config) -> list:
 
 async def get_image_from_message(message, bot) -> Optional[dict]:
     if not message:
-        return
+        return None
     elif message.photo:
         byte_file = await bot.download(message.photo[-1].file_id)
         mime = "image/jpeg"
@@ -377,14 +373,14 @@ async def get_image_from_message(message, bot) -> Optional[dict]:
         byte_file = await bot.download(message.sticker.thumbnail.file_id)
         mime = "image/webp"
     else:
-        return
+        return None
     # noinspection PyUnresolvedReferences
     return {"data": base64.b64encode(byte_file.getvalue()).decode('utf-8'), "mime": mime}
 
 
 def get_poll_text(message):
     if not message.poll:
-        return
+        return None
     poll_text = message.poll.question + "\n\n"
     for option in message.poll.options:
         poll_text += "☑️ " + option.text + "\n"

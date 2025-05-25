@@ -54,8 +54,11 @@ async def chatgpt(message: types.Message):
             if "can't parse entities" in str(exc):
                 logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
                 await send_message(text, reply=reply)
-            elif "text must be non-empty" in str(exc) and len(answer) == 1:
-                await send_message("ᅠ ", reply=reply)
+            elif "message text is empty" in str(exc):
+                if len(answer) == 1:
+                    await send_message("ᅠ ", reply=reply)
+                else:
+                    logging.warning(str(exc))
             else:
                 logging.error(traceback.format_exc())
 
@@ -113,7 +116,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.6.8 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.6.9 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 
