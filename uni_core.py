@@ -64,7 +64,7 @@ class Dialog:
         text_converter.ignore_links = True
         return text_converter.handle(exc_text)
 
-    def send_api_request_openai(self, client, queue, model, messages,
+    def send_api_request_openai(self, client: openai.OpenAI, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -89,7 +89,9 @@ class Dialog:
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    stream=False)
+                    stream=False,
+                    timeout=180
+                )
                 answer = completion.choices[0].message.content
                 total_tokens = completion.usage.total_tokens
                 if total_tokens == 0:
@@ -105,7 +107,7 @@ class Dialog:
         queue.release()
         raise ApiRequestException
 
-    def send_api_request_claude(self, client, queue, model, messages,
+    def send_api_request_claude(self, client: anthropic.Anthropic, queue, model, messages,
                                 max_tokens=1000,
                                 system=None,
                                 temperature=None,
@@ -122,6 +124,7 @@ class Dialog:
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": False,
+            "timeout": 180
         }
         if system:
             kwargs.update({'system': system})
