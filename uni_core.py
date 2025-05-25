@@ -389,16 +389,16 @@ class Dialog:
         if self.config.summarizer_engine == 'memory':
             mode = 'memory'
             model = self.config.memory_model
-            tokens_per_answer = self.config.memory_tokens_per_answer,
-            temperature = self.config.memory_temperature,
-            stream_mode = self.config.memory_stream_mode,
+            tokens_per_answer = self.config.memory_tokens_per_answer
+            temperature = self.config.memory_temperature
+            stream_mode = self.config.memory_stream_mode
             attempts = self.config.memory_attempts
         else:
             mode = 'personality'
             model = self.config.model
-            tokens_per_answer = self.config.tokens_per_answer,
-            temperature = self.config.temperature,
-            stream_mode = self.config.stream_mode,
+            tokens_per_answer = self.config.tokens_per_answer
+            temperature = self.config.temperature
+            stream_mode = self.config.stream_mode
             attempts = self.config.attempts
 
         try:
