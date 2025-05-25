@@ -90,7 +90,7 @@ class ConfigData:
                 self.attempts = int(config["Personality"]["gen-attempts"])
                 self.full_debug = self.bool_init(config["Personality"]["full-debug"])
                 queue_size = int(config["Personality"]["queue-size"])
-                self.summarizer_engine = config["Personality"]["summarizer-engine"]
+                self.summarizer_engine = config["Personality"]["summarizer-engine"].lower()
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
                 self.memory_model_vendor = config["Memory"]["model-vendor"].lower()
