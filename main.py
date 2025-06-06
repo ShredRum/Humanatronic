@@ -107,7 +107,7 @@ async def chatgpt(message: types.Message):
             pass
         await asyncio.sleep(5)
         await utils.send_message(message, bot, paragraph, parse=parse_mode)
-    await chat_queue.release()
+    chat_queue.release()
 
 
 async def main():
