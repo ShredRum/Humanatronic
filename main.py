@@ -7,7 +7,7 @@ import traceback
 from aiogram import types, Bot, Dispatcher, exceptions
 from aiogram.filters.command import Command
 
-import uni_core
+import ai_core
 import sql_worker
 import utils
 
@@ -83,7 +83,7 @@ async def chatgpt(message: types.Message):
 
     context = message.chat.id if not config.unified_context else 0
     if dialogs.get(context) is None:
-        dialogs.update({context: uni_core.Dialog(config, sql_helper, context)})
+        dialogs.update({context: ai_core.Dialog(config, sql_helper, context)})
     if is_flooded(message):
         return
 
@@ -116,7 +116,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.7.3 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.7.4 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 

@@ -105,9 +105,9 @@ class ConfigData:
                     raise KeyError('The "summarizer-engine" parameter value can only be "personality" or "memory"')
                 if self.memory_model_vendor not in ("openai", "anthropic"):
                     raise KeyError('The "memory" model vendor must be "openai" or "anthropic"')
-                if self.prefill_mode not in ('assistant', 'pre-user', 'post-user'):
+                if self.prefill_mode not in ('assistant', 'pre-user', 'post-user', 'disabled'):
                     raise KeyError('The "prefill-mode" parameter value can only be '
-                                   '"assistant", "pre-user" or "post-user"')
+                                   '"assistant", "pre-user", "post-user" or "disabled"')
                 break
             except Exception as e:
                 logging.error(str(e))
