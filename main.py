@@ -97,7 +97,7 @@ async def chatgpt(message: types.Message):
         chats_queue.update({message.chat.id: asyncio.Lock()})
         chat_queue = chats_queue.get(message.chat.id)
 
-    chat_queue.acquire()
+    await chat_queue.acquire()
     await utils.send_message(message, bot, answer[0], parse=parse_mode, reply=True)
     for paragraph in answer[1::]:
         await asyncio.sleep(5)
@@ -107,7 +107,7 @@ async def chatgpt(message: types.Message):
             pass
         await asyncio.sleep(5)
         await utils.send_message(message, bot, paragraph, parse=parse_mode)
-    chat_queue.release()
+    await chat_queue.release()
 
 
 async def main():
