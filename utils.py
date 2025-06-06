@@ -15,7 +15,7 @@ from typing import Optional
 
 from PIL import Image
 
-from aiogram import types
+from aiogram import types, exceptions
 
 
 class ConfigData:
@@ -390,3 +390,20 @@ def get_poll_text(message):
     for option in message.poll.options:
         poll_text += "☑️ " + option.text + "\n"
     return poll_text
+
+
+async def send_message(message, bot, text, parse=None, reply=False):
+    thread_id = message.message_thread_id if message.is_topic_message else None
+    try:
+        if reply:
+            await message.reply(text, allow_sending_without_reply=True, parse_mode=parse)
+        else:
+            await bot.send_message(message.chat.id, text, thread_id, parse_mode=parse)
+    except exceptions.TelegramBadRequest as e:
+        if "can't parse entities" in str(e):
+            logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
+            await send_message(message, bot, text, reply=reply)
+        elif "text must be non-empty" in str(e) or 'message text is empty' in str(e):
+            logging.warning(f"Failed to send empty message in chat! Message content: {text}")
+        else:
+            logging.error(traceback.format_exc())
