@@ -380,7 +380,7 @@ class Dialog:
     # noinspection PyTypeChecker
     async def summarizer(self, chat_name):
 
-        summarizer_text = self.config.prompts.summarizer.format(self.config.memory_dump_size)
+        summarizer_text = self.config.prompts.summarizer
         split = self.summarizer_index()
 
         compressed_dialogue = self.dialog_history[:split:]
@@ -393,14 +393,14 @@ class Dialog:
         if self.config.summarizer_engine == 'memory':
             mode = 'memory'
             model = self.config.memory_model
-            tokens_per_answer = self.config.memory_tokens_per_answer
+            tokens_per_answer = self.config.memory_dump_size
             temperature = self.config.memory_temperature
             stream_mode = self.config.memory_stream_mode
             attempts = self.config.memory_attempts
         else:
             mode = 'personality'
             model = self.config.model
-            tokens_per_answer = self.config.tokens_per_answer
+            tokens_per_answer = self.config.memory_dump_size
             temperature = self.config.temperature
             stream_mode = self.config.stream_mode
             attempts = self.config.attempts

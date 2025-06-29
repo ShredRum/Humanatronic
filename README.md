@@ -45,7 +45,7 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 9. queue-size - how many simultaneous requests the bot processes
 10. summarizer-limit - the size of the dialog in tokens, upon reaching which the "lazy summarizing" process is launched
 11. tokens-per-answer - the value of the maximum number of tokens in the API response
-12. memory-dump-size - the number of characters limiting the size of the memory dump, use in the "summarizer" prompt parameter using quotation marks {}. Deprecated parameter.
+12. memory-dump-size - the token limit that the summed dialog should fit into.
 13. vision - if True, the bot will be able to recognize images and stickers (requires support for the used API, must be disabled for the first launch after switching the "model-vendor" parameter)
 14. full-debug - the bot saves ALL service information to the logs (request data, API responses, full text of errors that occur), used to debug its operation. It is not recommended to enable it on a permanent basis.
 15. summarizer-engine - determines whether the summarizing mechanism uses the main neural network with its settings or the memory neural network. The value can be changed if the main neural network is not suitable for summarizing due to technical limitations.
