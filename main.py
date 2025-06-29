@@ -98,7 +98,7 @@ async def chatgpt(message: types.Message):
         chat_queue = chats_queue.get(message.chat.id)
 
     await chat_queue.acquire()
-    await utils.send_message(message, bot, answer[0], parse=parse_mode, reply=True)
+    await utils.send_message(message, bot, answer[0], config.markdown_filter, parse_mode=parse_mode, reply=True)
     for paragraph in answer[1::]:
         await asyncio.sleep(5)
         try:
@@ -106,7 +106,7 @@ async def chatgpt(message: types.Message):
         except exceptions.TelegramBadRequest:
             pass
         await asyncio.sleep(5)
-        await utils.send_message(message, bot, paragraph, parse=parse_mode)
+        await utils.send_message(message, bot, paragraph, config.markdown_filter, parse_mode=parse_mode)
     chat_queue.release()
 
 
@@ -114,7 +114,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.8 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.9 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 

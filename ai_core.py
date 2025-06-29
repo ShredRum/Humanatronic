@@ -123,11 +123,12 @@ class Dialog:
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "stream": False,
             "timeout": 180
         }
         if system:
             kwargs.update({'system': system})
+        if not stream:
+            kwargs.update({'stream': False})
 
         queue.acquire()
         for _ in range(attempts):
@@ -281,22 +282,28 @@ class Dialog:
             current_time = f"{utils.current_time_info(self.config)}\n"
             logging.info(f"Time updated for dialogue in {chat_name}")
         prompt = f'{current_time}{memory_result}{reply_msg_text}{main_text}'
+        prefill_ass = None
+        if self.config.prompts.prefill:
+            if self.config.prefill_mode == 'assistant':
+                prefill_ass = {"role": "assistant", "content": self.config.prompts.prefill}
+            elif self.config.prefill_mode == 'pre-user':
+                prompt = f"{self.config.prompts.prefill}\n{prompt}"
+            elif self.config.prefill_mode == 'post-user':
+                prompt = f"{prompt}\n{self.config.prompts.prefill}"
+
         if photo_base64:
             dialog_buffer.append({"role": "user", "content": self.get_image_context(photo_base64, prompt)})
         else:
             dialog_buffer.append({"role": "user", "content": prompt})
+        if prefill_ass:
+            dialog_buffer.append(prefill_ass)
+
         if self.dialogue_locker.locked():
             logging.info(f"Adding messages is blocked for {chat_name} due to the work of the summarizer.")
             summarizer_used = True
             await self.dialogue_locker.acquire()
             self.dialogue_locker.release()
-        if self.config.prompts.prefill:
-            if self.config.prefill_mode == 'assistant':
-                dialog_buffer.append({"role": "assistant", "content": self.config.prompts.prefill})
-            elif self.config.prefill_mode == 'pre-user':
-                dialog_buffer[-1]['content'] = f"{self.config.prompts.prefill}\n{dialog_buffer[-1]['content']}"
-            elif self.config.prefill_mode == 'post-user':
-                dialog_buffer[-1]['content'] = f"{dialog_buffer[-1]['content']}\n{self.config.prompts.prefill}"
+
         try:
             args = ['personality',
                     self.config.model,

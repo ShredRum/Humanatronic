@@ -72,6 +72,7 @@ class ConfigData:
                 self.unified_context = self.bool_init(config["Telegram"]["unified-context"])
                 self.service_messages = self.bool_init(config["Telegram"]["service-messages"])
                 self.markdown_enable = self.bool_init(config["Telegram"]["markdown-enable"])
+                self.markdown_filter = self.bool_init(config["Telegram"]["markdown-filter"])
                 self.split_paragraphs = self.bool_init(config["Telegram"]["split-paragraphs"])
                 self.reply_to_quotes = self.bool_init(config["Telegram"]["reply-to-quotes"])
                 self.max_answer_len = int(config["Telegram"]["max-answer-len"])
@@ -192,6 +193,7 @@ class ConfigData:
         config.set("Telegram", "unified-context", "false")
         config.set("Telegram", "service-messages", "true")
         config.set("Telegram", "markdown-enable", "true")
+        config.set("Telegram", "markdown-filter", "true")
         config.set("Telegram", "split-paragraphs", "true")
         config.set("Telegram", "reply-to-quotes", "true")
         config.set("Telegram", "max-answer-len", "2000")
@@ -392,17 +394,19 @@ def get_poll_text(message):
     return poll_text
 
 
-async def send_message(message, bot, text, parse=None, reply=False):
+async def send_message(message, bot, text: str, markdown_filter=None, parse_mode=None, reply=False):
     thread_id = message.message_thread_id if message.is_topic_message else None
+    if markdown_filter and not parse_mode:
+        text = text.replace('*', '').replace('`', '')
     try:
         if reply:
-            await message.reply(text, allow_sending_without_reply=True, parse_mode=parse)
+            await message.reply(text, allow_sending_without_reply=True, parse_mode=parse_mode)
         else:
-            await bot.send_message(message.chat.id, text, thread_id, parse_mode=parse)
+            await bot.send_message(message.chat.id, text, thread_id, parse_mode=parse_mode)
     except exceptions.TelegramBadRequest as e:
         if "can't parse entities" in str(e):
             logging.warning("Telegram could not parse markdown in message, it will be sent without formatting")
-            await send_message(message, bot, text, reply=reply)
+            await send_message(message, bot, text, markdown_filter, None, reply)
         elif "text must be non-empty" in str(e) or 'message text is empty' in str(e):
             logging.warning(f"Failed to send empty message in chat! Message content: {text}")
         else:

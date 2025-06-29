@@ -28,10 +28,11 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 3. unified-context - if True, the conversation history is shared across all chats with the bot, if False, each chat has its own conversation history
 4. service-messages - whether the bot responds to the /start command or not (yes, if True).
 5. markdown-enable - if True, the bot tries to send a message using Markdown as formatting (if it fails, it will send as is). If False, it will always send the message without formatting.
-6. split-paragraphs - if True, the bot will send text separated by "\n\n" as separate messages.
-7. reply-to-quotes - if True, you can quote text from messages (including bot messages) as a replay, and the bot will respond to them, taking into account the quoted text and the text of the main message. If False, the bot will completely ignore the message with the quote.
-8. max-answer-len - the maximum length of a message sent in Telegram. If the message is longer, it is automatically divided into parts using a smart parser (at each stage, it tries to divide the message by line breaks, then by sentences, then by words, then by symbols, moving on to a rougher version if the previous one fails). Setting a value greater than 4096 may cause the bot to malfunction when sending messages that are too long.
-9. random-response-probability - probability in float with which the bot will respond to a message in public chat that was not addressed to it (where 1 => 100%, 0 => never, 0.01 => 1%, etc.)
+6. markdown-filter - If True, this parameter removes unnecessary Markdown formatting characters from the text that interfere with reading. Only works if Markdown formatting is disabled or sending a message with Markdown formatting failed.
+7. split-paragraphs - if True, the bot will send text separated by "\n\n" as separate messages.
+8. reply-to-quotes - if True, you can quote text from messages (including bot messages) as a replay, and the bot will respond to them, taking into account the quoted text and the text of the main message. If False, the bot will completely ignore the message with the quote.
+9. max-answer-len - the maximum length of a message sent in Telegram. If the message is longer, it is automatically divided into parts using a smart parser (at each stage, it tries to divide the message by line breaks, then by sentences, then by words, then by symbols, moving on to a rougher version if the previous one fails). Setting a value greater than 4096 may cause the bot to malfunction when sending messages that are too long.
+10. random-response-probability - probability in float with which the bot will respond to a message in public chat that was not addressed to it (where 1 => 100%, 0 => never, 0.01 => 1%, etc.)
 ## Section [Personality]
 1. api-key - key for accessing OpenAI/Anthropic API
 2. base-url - URL where OpenAI/Anthropic API requests are sent (empty by default)
