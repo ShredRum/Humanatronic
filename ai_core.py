@@ -246,14 +246,8 @@ class Dialog:
             if reply_msg:
                 request_to_memory = f'{reply_msg_text}{request_to_memory}'
             try:
-                sys_mem_prompt = f'{self.config.prompts.memory_read}'
-                mem_request = [{"role": "user",
-                                "content": f'This is YOUR OWN CHARACTER MEMORY.\n'
-                                           f'"{self.memory_dump}"'},
-                               {"role": "assistant",
-                                "content": 'Thanks, I will use the information from this message to answer'},
-                               {"role": "user",
-                                "content": request_to_memory}]
+                sys_mem_prompt = f'{self.config.prompts.memory_read}\n{self.memory_dump}'
+                mem_request = [{"role": "user", "content": request_to_memory}]
                 args = ['memory',
                         self.config.memory_model,
                         mem_request,

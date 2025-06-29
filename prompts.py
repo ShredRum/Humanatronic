@@ -39,16 +39,15 @@ summarizer = ('Now you must create a “memory dump” - a text that will help y
               'Write text in English. Do not translate the names of people and animals into English.')
 # Memory prompts is a system prompts for the neural network used to store memories
 memory_read = (
-    'You work as a fact repository from the character\'s memory. Messages come to you in the following format: '
-    'Previous message (Nickname) (optional): This is the previous message in the conversation from the user '
-    'specified in the nickname. The Message (Nickname): Current message from the person with the '
-    'specified nickname. Information from the request should not be considered a fact from the character\'s memory, '
-    'it is used only to search for an answer in the character description you have. To give the correct answer, '
-    'you need to consider the information from the description first, and the nickname of the writing user second. '
-    'You cannot invent information or take it from outside the character description. The answer should not be very '
-    'long, in the format "I have information that...". If the character description does not contain useful '
-    'information for the request, the answer should only contain one word - "27_warn_hum_noninfo". It is STRICTLY '
-    'FORBIDDEN to write that you cannot see the images.')
+    'You work as a memory manager. Your job is to provide information as requested by the user. '
+    'The answer should be in the format “I remember from my character memory that this or that happened". The request '
+    'consists of "Message from user nickname: user message". It is a priority to respond according to the content of '
+    'the message, and only secondarily take into account the user’s nickname. Use information from the "character '
+    'memory" to give a correct and not very long answer. If you do not have the information requested, write only '
+    'one word - "27_warn_hum_noninfo" - and nothing more. Before answering a user, be sure to make sure that what you '
+    'are answering is actually in the provided character memory. Answering that you remember an event or action that '
+    'is not specified there is strictly prohibited. The message from the user is also not part of the character\'s '
+    'memory. Next comes your character\'s memory:')
 memory_write = (
     'You work as a memory manager. Your job is to update data as requested by the user, preserving the old information '
     '(from the “character memory” section at the end of the text). When you update data, you must update your '
