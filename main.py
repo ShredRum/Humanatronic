@@ -100,7 +100,7 @@ async def chatgpt(message: types.Message):
         answer = utils.answer_parser(await dialogs.get(context).get_answer(message, reply_msg, photo_base64), config)
     except ai_core.ApiRequestException:
         if call_type == 'default':
-            answer = random.choice(config.prompts.errors)
+            answer = [random.choice(config.prompts.errors)]
         else:
             return
     chat_queue = chats_queue.get(message.chat.id)
@@ -125,7 +125,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.9.4 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.9.5 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 
