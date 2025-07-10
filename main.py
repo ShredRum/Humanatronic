@@ -44,8 +44,12 @@ async def start(message: types.Message):
                                  reply=True)
 
 
-@dp.message(lambda message: utils.check_names(message, config))
+@dp.message()
 async def chatgpt(message: types.Message):
+
+    call_type = utils.check_names(message, config)
+    if not call_type:
+        return
 
     if not await utils.check_whitelist(message, config):
         return
@@ -87,11 +91,18 @@ async def chatgpt(message: types.Message):
     logging.info(f"User {utils.username_parser(message)} send a request to ChatGPT")
     parse_mode = 'markdown' if config.markdown_enable else None
     try:
-        await bot.send_chat_action(chat_id=message.chat.id, action='typing')
+        if call_type == 'default':
+            await bot.send_chat_action(chat_id=message.chat.id, action='typing')
     except exceptions.TelegramBadRequest as e:
         logging.error(f'Error sending message to chat {message.chat.id}\n{e}')
         return
-    answer = utils.answer_parser(await dialogs.get(context).get_answer(message, reply_msg, photo_base64), config)
+    try:
+        answer = utils.answer_parser(await dialogs.get(context).get_answer(message, reply_msg, photo_base64), config)
+    except ai_core.ApiRequestException:
+        if call_type == 'default':
+            answer = random.choice(config.prompts.errors)
+        else:
+            return
     chat_queue = chats_queue.get(message.chat.id)
     if not chat_queue:
         chats_queue.update({message.chat.id: asyncio.Lock()})
@@ -114,7 +125,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.9.3 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.9.4 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 

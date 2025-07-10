@@ -11,7 +11,7 @@ import time
 import traceback
 from importlib import reload
 from io import BytesIO
-from typing import Optional
+from typing import Optional, Union
 
 from PIL import Image
 
@@ -246,7 +246,7 @@ class ConfigData:
             raise TypeError
 
 
-def check_names(message, config):
+def check_names(message, config) -> Union[None, str]:
     """
     The bot will only respond if called by name (if it's public chat)
     :param message:
@@ -255,24 +255,27 @@ def check_names(message, config):
     """
 
     if not any([message.text, message.caption, message.photo, message.sticker, message.poll]):
-        return False
+        return None
+    msg_txt = message.text or message.caption
     if message.chat.id == message.from_user.id:
-        return True
+        if msg_txt is not None:
+            if re.fullmatch(r"/[a-zA-Z0-9]+", msg_txt.split(" ", 1)[0]):
+                return None
+        return 'default'
     if message.reply_to_message:
         if message.reply_to_message.from_user.id == config.my_id:
-            return True
-    msg_txt = message.text or message.caption
+            return 'default'
     if msg_txt is None:
-        return False
+        return None
     if config.my_username in msg_txt:
-        return True
+        return 'default'
     msg_txt = re.sub(r'[^\w\s]', '', msg_txt.lower()).split()
     for name in config.prompts.names:
         if name.lower() in msg_txt:
-            return True
+            return 'default'
     if random.random() < config.random_response_probability:
-        return True
-    return False
+        return 'auto'
+    return None
 
 
 def username_parser(message, html=False):

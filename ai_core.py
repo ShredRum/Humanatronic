@@ -312,7 +312,7 @@ class Dialog:
                 logging.info(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{self.system}\n\n{dialog_buffer}"
                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR API REQUEST--")
         except ApiRequestException:
-            return random.choice(self.config.prompts.errors)
+            raise ApiRequestException
 
         logging.info(f'{total_tokens} tokens counted by the OpenAI API in {chat_name}.')
         if self.dialogue_locker.locked():
