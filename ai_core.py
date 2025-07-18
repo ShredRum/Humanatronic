@@ -230,6 +230,10 @@ class Dialog:
         if msg_txt is None:
             msg_txt = "I sent a sticker" if photo_base64['mime'] == "image/webp" else "I sent a photo"
 
+        if self.config.unicode_filter:
+            msg_txt, reply_msg_text, chat_name, username = map(utils.unicode_filter,
+                                                               (msg_txt, reply_msg_text, chat_name, username))
+
         main_text = f"Chat: {chat_name}\nMessage ({username}): {msg_txt}"
 
         dialog_buffer = self.dialog_history.copy()

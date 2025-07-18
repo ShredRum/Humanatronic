@@ -9,6 +9,7 @@ import re
 import sys
 import time
 import traceback
+import unicodedata
 from importlib import reload
 from io import BytesIO
 from typing import Optional, Union
@@ -73,6 +74,7 @@ class ConfigData:
                 self.service_messages = self.bool_init(config["Telegram"]["service-messages"])
                 self.markdown_enable = self.bool_init(config["Telegram"]["markdown-enable"])
                 self.markdown_filter = self.bool_init(config["Telegram"]["markdown-filter"])
+                self.unicode_filter = self.bool_init(config["Telegram"]["unicode-filter"])
                 self.split_paragraphs = self.bool_init(config["Telegram"]["split-paragraphs"])
                 self.reply_to_quotes = self.bool_init(config["Telegram"]["reply-to-quotes"])
                 self.max_answer_len = int(config["Telegram"]["max-answer-len"])
@@ -194,6 +196,7 @@ class ConfigData:
         config.set("Telegram", "service-messages", "true")
         config.set("Telegram", "markdown-enable", "true")
         config.set("Telegram", "markdown-filter", "true")
+        config.set("Telegram", "unicode-filter", "true")
         config.set("Telegram", "split-paragraphs", "true")
         config.set("Telegram", "reply-to-quotes", "true")
         config.set("Telegram", "max-answer-len", "2000")
@@ -414,3 +417,7 @@ async def send_message(message, bot, text: str, markdown_filter=None, parse_mode
             logging.warning(f"Failed to send empty message in chat! Message content: {text}")
         else:
             logging.error(traceback.format_exc())
+
+
+def unicode_filter(str_):
+    return "".join(ch for ch in str_ if unicodedata.category(ch)[0] != 'C' or ch in {'\n', '\r', '\t'})
