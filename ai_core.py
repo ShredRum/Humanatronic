@@ -69,16 +69,12 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                attempts=3,
-                                prefill=None):
+                                attempts=3):
 
         if system:
             system = [{"role": "system", "content": system}]
             system.extend(messages)
             messages = system
-
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
 
         queue.acquire()
         for _ in range(attempts):
@@ -112,11 +108,7 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                attempts=3,
-                                prefill=None):
-
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
+                                attempts=3):
 
         kwargs = {
             "model": model,
@@ -449,6 +441,11 @@ class Dialog:
             compressed_dialogue_result += answer.replace('42_info_sum_complete', '')
             logging.info(f"{compress_tokens_counter} tokens were used to compress the dialogue")
 
+            if len(compressed_dialogue_result) < 400 or compressed_dialogue_result.isspace():
+                logging.error('The results of dialog compression were not validated (the result length is '
+                              'less than 400 characters or it consists only of spaces)')
+                raise ApiRequestException
+
             merge_tokens_counter = 0
             if self.memory_dump:
                 merge_dialogue_result = ''
@@ -491,6 +488,10 @@ class Dialog:
                 if '42_info_sum_complete' not in answer:
                     logging.warning('Confirmation of merge completion was not received from the neural network.')
                 merge_dialogue_result += answer.replace('42_info_sum_complete', '')
+                if len(merge_dialogue_result) < 400 or merge_dialogue_result.isspace():
+                    logging.error('The results of memory merging were not validated (the result length is '
+                                  'less than 400 characters or it consists only of spaces)')
+                    raise ApiRequestException
                 self.memory_dump = merge_dialogue_result
                 logging.info(f"{merge_tokens_counter} tokens were used to merge the dialogue")
             else:
