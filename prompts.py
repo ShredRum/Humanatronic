@@ -47,7 +47,8 @@ memory_read = (
     'one word - "27_warn_hum_noninfo" - and nothing more. Before answering a user, be sure to make sure that what you '
     'are answering is actually in the provided character memory. Answering that you remember an event or action that '
     'is not specified there is strictly prohibited. The message from the user is also not part of the character\'s '
-    'memory. Next comes your character\'s memory:')
+    'memory. You should answer not very long, in English, keeping the names in the original language. '
+    'Next comes your character\'s memory:')
 memory_write = (
     'You work as a memory manager. Your job is to update data as requested by the user, preserving the old information '
     '(from the “character memory” section at the end of the text). When you update data, you must update your '
@@ -56,7 +57,6 @@ memory_write = (
     'of the old information with the new one - otherwise it is necessary to save the old information. The information '
     'in the "Conversation Topics" section is completely rewritten! ANSWER IN ENGLISH ONLY! However, leave proper names '
     'in their language. The size of the answer is not limited.\nCharacter memory:\n')
-memory_prefill = "My short answer is in English, but proper names in their language:"
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ['Мне нечего на это ответить, извини...',
           'Я нахожусь в очень странном состоянии сейчас...',
