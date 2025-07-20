@@ -439,9 +439,9 @@ class Dialog:
                 ])
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
-                logging.info(f'Compressing, iteration {compress_iter + 1} completed, used {total_tokens} tokens...')
+                logging.info(f'Compressing, iteration {compress_iter + 2} completed, used {total_tokens} tokens...')
                 if self.config.full_debug:
-                    logging.info(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING, ITERATION {compress_iter + 1}--\n\n"
+                    logging.info(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING, ITERATION {compress_iter + 2}--\n\n"
                                  f"{compressed_dialogue}\n\n{answer}\n\n"
                                  "--END OF FULL DEBUG INFO FOR DIALOG COMPRESSING--")
                 compress_tokens_counter += total_tokens
@@ -483,9 +483,9 @@ class Dialog:
                                                     'Write "42_info_sum_complete" at the end when you finish.'}])
                     answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                         None, self.send_api_request, *args)
-                    logging.info(f'Merging, iteration {merge_iter + 1} completed, used {total_tokens} tokens...')
+                    logging.info(f'Merging, iteration {merge_iter + 2} completed, used {total_tokens} tokens...')
                     if self.config.full_debug:
-                        logging.info(f"--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION {merge_iter + 1}--\n\n"
+                        logging.info(f"--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION {merge_iter + 2}--\n\n"
                                      f"{sys_mem_prompt}\n\n{merge_request}\n\n{answer}\n\n"
                                      "--END OF FULL DEBUG INFO FOR MEMORY MERGING--")
                     merge_tokens_counter += total_tokens
