@@ -94,6 +94,7 @@ class ConfigData:
                 self.full_debug = self.bool_init(config["Personality"]["full-debug"])
                 queue_size = int(config["Personality"]["queue-size"])
                 self.summarizer_engine = config["Personality"]["summarizer-engine"].lower()
+                self.summarizer_iterations = int(config["Personality"]["summarizer-iterations"])
                 self.prefill_mode = config["Personality"]["prefill-mode"].lower()
                 self.memory_api_key = config["Memory"]["api-key"]
                 self.memory_model = config["Memory"]["model"]
@@ -169,6 +170,10 @@ class ConfigData:
             logging.warning('''Value "queue-size" can't be less than or equal to 0, set to default (3)''')
             queue_size = 3
 
+        if not 1 <= self.summarizer_iterations <= 10:
+            logging.warning('''Value "summarizer-iterations" can only have a value from 1 to 10, set to default (3)''')
+            self.summarizer_iterations = 3
+
         self.api_queue = BoundedSemaphore(queue_size)
         self.memory_api_queue = BoundedSemaphore(memory_queue_size)
 
@@ -216,6 +221,7 @@ class ConfigData:
         config.set("Personality", "tokens-per-answer", "2000")
         config.set("Personality", "memory-dump-size", "2000")
         config.set("Personality", "summarizer-engine", "personality")
+        config.set("Personality", "summarizer-iterations", "3")
         config.set("Personality", "prefill-mode", "assistant")
         if "vision" in model:
             config.set("Personality", "vision", "true")
