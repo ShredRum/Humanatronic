@@ -95,7 +95,7 @@ class ConfigData:
                 queue_size = int(config["Personality"]["queue-size"])
                 self.summarizer_engine = config["Personality"]["summarizer-engine"].lower()
                 self.summarizer_iterations = int(config["Personality"]["summarizer-iterations"])
-                self.summarizer_minimal_ratio = float(config["Telegram"]["summarizer-minimal-ratio"]
+                self.summarizer_minimal_ratio = float(config["Personality"]["summarizer-minimal-ratio"]
                                                       .replace(',', "."))
                 self.prefill_mode = config["Personality"]["prefill-mode"].lower()
                 self.memory_api_key = config["Memory"]["api-key"]
