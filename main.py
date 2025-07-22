@@ -125,7 +125,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.10.3 (Dualcore) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.10.4 (Dualcore) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 
