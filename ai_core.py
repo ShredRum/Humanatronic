@@ -375,13 +375,13 @@ class Dialog:
     # noinspection PyTypeChecker
     async def summarizer(self, chat_name):
 
-        summarizer_text = self.config.prompts.summarizer
         split = self.summarizer_index()
-
         compressed_dialogue = self.dialog_history[:split:]
-        compressed_dialogue.append({"role": "user",
-                                    "content": f'{summarizer_text}\n{utils.current_time_info(self.config)}\n'
-                                               f'Write "42_info_sum_complete" at the end when you finish.'})
+        compressed_dialogue.append({
+            "role": "user", "content": f'{self.config.prompts.summarizer}\n'
+                                       f'{utils.current_time_info(self.config)}\n'
+                                       f'Write "42_info_sum_complete" at the end when you finish.'
+        })
 
         # When sending pictures to the summarizer, it does not work correctly, so we delete them
         compressed_dialogue = self.cleaning_images(compressed_dialogue)
@@ -449,16 +449,17 @@ class Dialog:
             merge_tokens_counter = 0
             if self.memory_dump:
                 merge_dialogue_result = ''
-                merge_request = [{"role": "user",
-                                  "content": f'Combine the information from the old and new JSON and '
-                                             f'write 42_info_sum_complete when you\'re done.\n\n'
-                                             f'Old JSON:\n{self.memory_dump}\n\nNew JSON:\n{compressed_dialogue_result}'
-                                             f''}]
-                sys_mem_prompt = self.config.prompts.memory_write
+                merge_request = [{
+                    "role": "user",
+                    "content": f'{self.config.prompts.memory_write}\n\nOld JSON:\n'
+                               f'{self.memory_dump}\n\nNew JSON:\n{compressed_dialogue_result}\n\n'
+                               f'Then combine the information from the old and '
+                               'new JSON and write 42_info_sum_complete when you\'re done.'
+                }]
                 args = [mode,
                         model,
                         merge_request,
-                        tokens_per_answer, sys_mem_prompt,
+                        tokens_per_answer, None,
                         temperature,
                         stream_mode,
                         attempts]
@@ -467,7 +468,7 @@ class Dialog:
                 logging.info(f'Merging, iteration 1 completed, used {total_tokens} tokens...')
                 if self.config.full_debug:
                     logging.info("--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION 1--\n\n"
-                                 f"{sys_mem_prompt}\n\n{merge_request}\n\n{answer}\n\n"
+                                 f"{merge_request}\n\n{answer}\n\n"
                                  "--END OF FULL DEBUG INFO FOR MEMORY MERGING--")
                 merge_tokens_counter += total_tokens
                 for merge_iter in range(self.config.summarizer_iterations - 1):
@@ -483,7 +484,7 @@ class Dialog:
                     logging.info(f'Merging, iteration {merge_iter + 2} completed, used {total_tokens} tokens...')
                     if self.config.full_debug:
                         logging.info(f"--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION {merge_iter + 2}--\n\n"
-                                     f"{sys_mem_prompt}\n\n{merge_request}\n\n{answer}\n\n"
+                                     f"{merge_request}\n\n{answer}\n\n"
                                      "--END OF FULL DEBUG INFO FOR MEMORY MERGING--")
                     merge_tokens_counter += total_tokens
                 if '42_info_sum_complete' not in answer:
