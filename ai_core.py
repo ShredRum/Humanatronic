@@ -450,10 +450,11 @@ class Dialog:
             if self.memory_dump:
                 merge_dialogue_result = ''
                 merge_request = [{"role": "user",
-                                  "content": f'Update information on the following memory block and write '
-                                             f'"42_info_sum_complete" at the end when you finish:\n'
-                                             f'{compressed_dialogue_result}'}]
-                sys_mem_prompt = f'{self.config.prompts.memory_write}{self.memory_dump}'
+                                  "content": f'Combine the information from the old and new JSON and '
+                                             f'write 42_info_sum_complete when you\'re done.\n\n'
+                                             f'Old JSON:\n{self.memory_dump}\n\nNew JSON:\n{compressed_dialogue_result}'
+                                             f''}]
+                sys_mem_prompt = self.config.prompts.memory_write
                 args = [mode,
                         model,
                         merge_request,
