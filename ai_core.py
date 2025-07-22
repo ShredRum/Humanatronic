@@ -425,8 +425,9 @@ class Dialog:
                 compressed_dialogue_result += answer.replace('42_info_sum_complete', '')
                 compressed_dialogue.extend([
                     {'role': 'assistant', 'content': answer},
-                    {"role": "user", "content": 'Complete the information starting from the symbol you stopped at. '
-                                                 'Write "42_info_sum_complete" at the end when you finish.'}
+                    {"role": "user", "content": 'Continue exactly where you left off. Do not write the information '
+                                                'that was already included in your previous uncompleted answer. '
+                                                'Write "42_info_sum_complete" at the end when you finish.'}
                 ])
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
@@ -477,7 +478,8 @@ class Dialog:
                     merge_dialogue_result += answer.replace('42_info_sum_complete', '')
                     merge_request.extend([
                         {'role': 'assistant', 'content': answer},
-                        {"role": "user", "content": 'Complete the information starting from the symbol you stopped at. '
+                        {"role": "user", "content": 'Continue exactly where you left off. Do not write the information '
+                                                    'that was already included in your previous uncompleted answer. '
                                                     'Write "42_info_sum_complete" at the end when you finish.'}])
                     answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                         None, self.send_api_request, *args)
