@@ -69,16 +69,12 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                attempts=3,
-                                prefill=None):
+                                attempts=3):
 
         if system:
             system = [{"role": "system", "content": system}]
             system.extend(messages)
             messages = system
-
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
 
         queue.acquire()
         for _ in range(attempts):
@@ -112,11 +108,7 @@ class Dialog:
                                 system=None,
                                 temperature=None,
                                 stream=False,
-                                attempts=3,
-                                prefill=None):
-
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
+                                attempts=3):
 
         kwargs = {
             "model": model,
@@ -258,8 +250,7 @@ class Dialog:
                         self.config.memory_tokens_per_answer, sys_mem_prompt,
                         self.config.memory_temperature,
                         self.config.memory_stream_mode,
-                        self.config.memory_attempts,
-                        self.config.prompts.memory_prefill]
+                        self.config.memory_attempts]
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
                 if self.config.full_debug:
