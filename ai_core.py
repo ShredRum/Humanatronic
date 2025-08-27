@@ -496,22 +496,23 @@ class Dialog:
                     logging.error('The results of memory merging were not validated (the result length is '
                                   'less than 400 characters or it consists only of spaces)')
                     raise ApiRequestException
-                memory_dump = merge_dialogue_result
                 logging.info(f"{merge_tokens_counter} tokens were used to merge the dialogue")
+                length_ratio = round(len(merge_dialogue_result) / len(self.memory_dump), 2)
+                if length_ratio < self.config.summarizer_minimal_ratio:
+                    logging.error(
+                        f"The ratio of lengths between old and new memory dump = {length_ratio}, which is lower "
+                        f"than the minimum threshold value {self.config.summarizer_minimal_ratio}. "
+                        f"Overwriting the old memory dump is rejected.")
+                    raise ApiRequestException
+                self.memory_dump = merge_dialogue_result
+                logging.info(f"The ratio of lengths between the old and new memory dump is {length_ratio}")
             else:
-                memory_dump = compressed_dialogue_result
+                self.memory_dump = compressed_dialogue_result
 
             if self.config.full_debug:
-                logging.info(f'--TEXT OF THE FINAL SUMMARIZING RESULT--\n\n{memory_dump}\n\n'
+                logging.info(f'--TEXT OF THE FINAL SUMMARIZING RESULT--\n\n{self.memory_dump}\n\n'
                              f'--END OF THE TEXT OF THE FINAL SUMMARIZING RESULT--')
-            length_ratio = round(len(memory_dump) / len(self.memory_dump), 2)
-            if length_ratio < self.config.summarizer_minimal_ratio:
-                logging.error(f"The ratio of lengths between old and new memory dump = {length_ratio}, which is lower "
-                              f"than the minimum threshold value {self.config.summarizer_minimal_ratio}. "
-                              f"Overwriting the old memory dump is rejected.")
-                raise ApiRequestException
-            self.memory_dump = memory_dump
-            logging.info(f"The ratio of lengths between the old and new memory dump is {length_ratio}")
+
         except ApiRequestException:
             logging.error(f"Summarizing failed for {chat_name}!")
             return
