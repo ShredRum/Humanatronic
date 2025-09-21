@@ -224,13 +224,13 @@ class ConfigData:
         config.set("Personality", "gen-attempts", "3")
         config.set("Personality", "queue-size", "3")
         config.set("Personality", "full-debug", "false")
-        config.set("Personality", "summarizer-limit", "6000")
-        config.set("Personality", "tokens-per-answer", "2000")
+        config.set("Personality", "summarizer-limit", "12000")
+        config.set("Personality", "tokens-per-answer", "6000")
         config.set("Personality", "memory-dump-size", "2000")
         config.set("Personality", "summarizer-engine", "personality")
         config.set("Personality", "summarizer-iterations", "3")
         config.set("Personality", "summarizer-minimal-ratio", "0.8")
-        config.set("Personality", "prefill-mode", "assistant")
+        config.set("Personality", "prefill-mode", "pre-user")
         if "vision" in model:
             config.set("Personality", "vision", "true")
         else:
