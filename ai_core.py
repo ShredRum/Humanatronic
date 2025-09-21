@@ -375,12 +375,13 @@ class Dialog:
     # noinspection PyTypeChecker
     async def summarizer(self, chat_name):
 
-        summarizer_text = self.config.prompts.summarizer
         split = self.summarizer_index()
-
         compressed_dialogue = self.dialog_history[:split:]
-        compressed_dialogue.append({"role": "user",
-                                    "content": f'{summarizer_text}\n{utils.current_time_info(self.config)}'})
+        compressed_dialogue.append({
+            "role": "user", "content": f'{self.config.prompts.summarizer}\n'
+                                       f'{utils.current_time_info(self.config)}\n'
+                                       f'Write "42_info_sum_complete" at the end when you finish.'
+        })
 
         # When sending pictures to the summarizer, it does not work correctly, so we delete them
         compressed_dialogue = self.cleaning_images(compressed_dialogue)
@@ -408,39 +409,116 @@ class Dialog:
                     temperature,
                     stream_mode,
                     attempts]
+            compressed_dialogue_result = ''
+            compress_tokens_counter = 0
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                 None, self.send_api_request, *args)
+            logging.info(f'Compressing, iteration 1 completed, used {total_tokens} tokens...')
             if self.config.full_debug:
-                logging.info(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING--\n\n{compressed_dialogue}"
-                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR DIALOG COMPRESSING--")
-            logging.info(f"{total_tokens} tokens were used to compress the dialogue")
+                logging.info("--FULL DEBUG INFO FOR DIALOG COMPRESSING, ITERATION 1--\n\n"
+                             f"{compressed_dialogue}\n\n{answer}\n\n"
+                             "--END OF FULL DEBUG INFO FOR DIALOG COMPRESSING--")
+            compress_tokens_counter += total_tokens
+            for compress_iter in range(self.config.summarizer_iterations - 1):
+                if '42_info_sum_complete' in answer:
+                    break
+                compressed_dialogue_result += answer.replace('42_info_sum_complete', '')
+                compressed_dialogue.extend([
+                    {'role': 'assistant', 'content': answer},
+                    {"role": "user", "content": 'Continue exactly where you left off. Do not write the information '
+                                                'that was already included in your previous uncompleted answer. '
+                                                'Write "42_info_sum_complete" at the end when you finish.'}
+                ])
+                answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                    None, self.send_api_request, *args)
+                logging.info(f'Compressing, iteration {compress_iter + 2} completed, used {total_tokens} tokens...')
+                if self.config.full_debug:
+                    logging.info(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING, ITERATION {compress_iter + 2}--\n\n"
+                                 f"{compressed_dialogue}\n\n{answer}\n\n"
+                                 "--END OF FULL DEBUG INFO FOR DIALOG COMPRESSING--")
+                compress_tokens_counter += total_tokens
+            if '42_info_sum_complete' not in answer:
+                logging.warning('Confirmation of compression completion was not received from the neural network.')
+            compressed_dialogue_result += answer.replace('42_info_sum_complete', '')
+            logging.info(f"{compress_tokens_counter} tokens were used to compress the dialogue")
 
+            if len(compressed_dialogue_result) < 400 or compressed_dialogue_result.isspace():
+                logging.error('The results of dialog compression were not validated (the result length is '
+                              'less than 400 characters or it consists only of spaces)')
+                raise ApiRequestException
+
+            merge_tokens_counter = 0
             if self.memory_dump:
-                memory_dump_request = [{"role": "user",
-                                        "content": f'Update information on the following memory block:\n{answer}'}]
-                sys_mem_prompt = f'{self.config.prompts.memory_write}{self.memory_dump}'
+                merge_dialogue_result = ''
+                merge_request = [{
+                    "role": "user",
+                    "content": f'{self.config.prompts.memory_write}\n\nOld JSON:\n'
+                               f'{self.memory_dump}\n\nNew JSON:\n{compressed_dialogue_result}\n\n'
+                               f'Then combine the information from the old and '
+                               'new JSON and write 42_info_sum_complete when you\'re done.'
+                }]
                 args = [mode,
                         model,
-                        memory_dump_request,
-                        tokens_per_answer, sys_mem_prompt,
+                        merge_request,
+                        tokens_per_answer, None,
                         temperature,
                         stream_mode,
                         attempts]
-                if self.config.full_debug:
-                    logging.info(f"--FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--\n\n{sys_mem_prompt}\n\n"
-                                  f"{memory_dump_request}\n\n"
-                                  f"{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY BLOCK UPDATING--")
-                self.memory_dump, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
                     None, self.send_api_request, *args)
-                logging.info(f"{total_tokens} tokens used to update the memory dump")
+                logging.info(f'Merging, iteration 1 completed, used {total_tokens} tokens...')
+                if self.config.full_debug:
+                    logging.info("--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION 1--\n\n"
+                                 f"{merge_request}\n\n{answer}\n\n"
+                                 "--END OF FULL DEBUG INFO FOR MEMORY MERGING--")
+                merge_tokens_counter += total_tokens
+                for merge_iter in range(self.config.summarizer_iterations - 1):
+                    if '42_info_sum_complete' in answer:
+                        break
+                    merge_dialogue_result += answer.replace('42_info_sum_complete', '')
+                    merge_request.extend([
+                        {'role': 'assistant', 'content': answer},
+                        {"role": "user", "content": 'Continue exactly where you left off. Do not write the information '
+                                                    'that was already included in your previous uncompleted answer. '
+                                                    'Write "42_info_sum_complete" at the end when you finish.'}])
+                    answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                        None, self.send_api_request, *args)
+                    logging.info(f'Merging, iteration {merge_iter + 2} completed, used {total_tokens} tokens...')
+                    if self.config.full_debug:
+                        logging.info(f"--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION {merge_iter + 2}--\n\n"
+                                     f"{merge_request}\n\n{answer}\n\n"
+                                     "--END OF FULL DEBUG INFO FOR MEMORY MERGING--")
+                    merge_tokens_counter += total_tokens
+                if '42_info_sum_complete' not in answer:
+                    logging.warning('Confirmation of merge completion was not received from the neural network.')
+                merge_dialogue_result += answer.replace('42_info_sum_complete', '')
+                if len(merge_dialogue_result) < 400 or merge_dialogue_result.isspace():
+                    logging.error('The results of memory merging were not validated (the result length is '
+                                  'less than 400 characters or it consists only of spaces)')
+                    raise ApiRequestException
+                logging.info(f"{merge_tokens_counter} tokens were used to merge the dialogue")
+                length_ratio = round(len(merge_dialogue_result) / len(self.memory_dump), 2)
+                if length_ratio < self.config.summarizer_minimal_ratio:
+                    logging.error(
+                        f"The ratio of lengths between old and new memory dump = {length_ratio}, which is lower "
+                        f"than the minimum threshold value {self.config.summarizer_minimal_ratio}. "
+                        f"Overwriting the old memory dump is rejected.")
+                    raise ApiRequestException
+                self.memory_dump = merge_dialogue_result
+                logging.info(f"The ratio of lengths between the old and new memory dump is {length_ratio}")
             else:
-                self.memory_dump = answer
+                self.memory_dump = compressed_dialogue_result
+
+            if self.config.full_debug:
+                logging.info(f'--TEXT OF THE FINAL SUMMARIZING RESULT--\n\n{self.memory_dump}\n\n'
+                             f'--END OF THE TEXT OF THE FINAL SUMMARIZING RESULT--')
+
         except ApiRequestException:
             logging.error(f"Summarizing failed for {chat_name}!")
             return
 
         logging.info(f"Summarizing completed for {chat_name}, "
-                     f"{total_tokens} tokens were used")
+                     f"{compress_tokens_counter + merge_tokens_counter} tokens were used")
         self.dialog_history = self.dialog_history[split::]
         try:
             self.sql_helper.memory_update(self.context, json.dumps(self.memory_dump, ensure_ascii=False))
