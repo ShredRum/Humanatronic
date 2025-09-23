@@ -50,16 +50,20 @@ ChatGPT-based bot code that imitates a personality, knows the current date and t
 10. summarizer-limit - the size of the dialog in tokens, upon reaching which the "lazy summarizing" process is launched
 11. tokens-per-answer - the value of the maximum number of tokens in the API response
 12. memory-dump-size - The token limit that is spent on EVERY iteration of the summator (applies to both chat summaries and merging with the old memory dump).
-13. vision - if True, the bot will be able to recognize images and stickers (requires support for the used API, and it MUST be disabled for the first launch after switching the "model-vendor" parameter)
+13. vision - This setting has three possible values:
+    - enabled - The bot can recognize images and stickers directly. This requires support from both the LLM and the API endpoint.
+    - memory-mode - The bot recognizes images and stickers using a dedicated memory neural network. This network generates a text description of the image, which is then sent to the character's primary LLM. This mode allows for image processing if the memory network can recognize them, but the character's LLM cannot.
+    - disabled - The bot does not recognize images and stickers.
+    > Warning! If you change the "model-vendor" parameter while "vision" is set to "enabled", you must first disable "vision" for the initial run to prevent bot failures. It can be re-enabled afterward.
 14. full-debug - the bot saves ALL service information to the logs (request data, API responses, full text of errors that occur), used to debug its operation. It is not recommended to enable it on a permanent basis.
 15. summarizer-engine - determines whether the summarizing mechanism uses the main neural network with its settings or the memory neural network. The value can be changed if the main neural network is not suitable for summarizing due to technical limitations.
 16. summarizer-iterations - Summarizer-iterations is a number that determines the limit of attempts for summarizing a conversation and merging with an old memory dump. The attempt counter for these two operations is not shared (for example, there are three summarizing attempts and three merging attempts by default, for a total of six requests to LLM).
 17. summarizer-minimal-ratio - A safety mechanism to prevent an existing memory dump from being overwritten by a new, significantly shorter one. If the length ratio (new dump / old dump) is less than a specified threshold, the overwrite operation will be rejected.
 18. prefill-mode - describes how the prefill will work in a dialogue with the bot
-- assistant - prefill will be added to the assistant role after the message that the user sends to the bot. The standard scheme for Anthropic, see https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/prefill-claudes-response. When used with the OpenAI API, it may give an unpredictable result.
-- pre-user - prefill is added to the very beginning of the text that is sent to the neural network from the user (in addition to the request text from the user, there is a lot of service information)
-- post-user - prefill is added to the end of the text that is sent to the neural network from the user
-- disabled - prefill is completely disabled
+    - assistant - prefill will be added to the assistant role after the message that the user sends to the bot. The standard scheme for Anthropic, see https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/prefill-claudes-response. When used with the OpenAI API, it may give an unpredictable result.
+    - pre-user - prefill is added to the very beginning of the text that is sent to the neural network from the user (in addition to the request text from the user, there is a lot of service information)
+    - post-user - prefill is added to the end of the text that is sent to the neural network from the user
+    - disabled - prefill is completely disabled
 You can use full-debug to better understand how service information and prefills work in Humanotronic.
 ## Section [Memory]
 The items in the memory level neural network settings correspond to the items in the personality neural network settings, but there you can use another, faster and cheaper neural network, another API, etc.

@@ -88,7 +88,7 @@ class ConfigData:
                 self.summarizer_limit = int(config["Personality"]["summarizer-limit"])
                 self.tokens_per_answer = int(config["Personality"]["tokens-per-answer"])
                 self.memory_dump_size = int(config["Personality"]["memory-dump-size"])
-                self.vision = self.bool_init(config["Personality"]["vision"])
+                self.vision = config["Personality"]["vision"]
                 self.stream_mode = self.bool_init(config["Personality"]["stream-mode"])
                 self.attempts = int(config["Personality"]["gen-attempts"])
                 self.full_debug = self.bool_init(config["Personality"]["full-debug"])
@@ -114,6 +114,9 @@ class ConfigData:
                 if self.prefill_mode not in ('assistant', 'pre-user', 'post-user', 'disabled'):
                     raise KeyError('The "prefill-mode" parameter value can only be '
                                    '"assistant", "pre-user", "post-user" or "disabled"')
+                if self.vision not in ("enabled", "memory-mode", "disabled"):
+                    raise KeyError('The "vision" parameter value can only be '
+                                   '"enabled", "memory-mode" or "disabled"')
                 break
             except Exception as e:
                 logging.error(str(e))
@@ -232,9 +235,9 @@ class ConfigData:
         config.set("Personality", "summarizer-minimal-ratio", "0.8")
         config.set("Personality", "prefill-mode", "pre-user")
         if "vision" in model:
-            config.set("Personality", "vision", "true")
+            config.set("Personality", "vision", "enabled")
         else:
-            config.set("Personality", "vision", "false")
+            config.set("Personality", "vision", "disabled")
         config.add_section("Memory")
         config.set("Memory", "api-key", memory_api_key)
         config.set("Memory", "base-url", "")

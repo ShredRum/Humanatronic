@@ -48,7 +48,7 @@ class Dialog:
                           f"it's time to start our conversation")
             self.dialog_history = json.loads(dialog_data[0][1])
             # Pictures saved in the database may cause problems when working without Vision
-            if not config.vision:
+            if config.vision != "enabled":
                 self.dialog_history = self.cleaning_images(self.dialog_history)
         self.system = f"{config.prompts.start}\n{config.prompts.hard}\n{start_time}"
         self.client = get_client(config.model_vendor, config.api_key, config.base_url)
@@ -211,6 +211,39 @@ class Dialog:
                 {"type": "input_image", "image_url":  f"data:{photo_base64['mime']};base64,{photo_base64['data']}"}
             ]
 
+    async def get_image_description(self, photo_base64):
+        if self.config.model_vendor == 'anthropic':
+            vision_content = [
+                {"type": "image", "source":
+                    {"type": "base64", "media_type": photo_base64['mime'], "data": photo_base64['data']}},
+                {"type": "text", "text": "Describe this image"}]
+        else:
+            vision_content = [
+                {"type": "input_text", "text": "Describe this image"},
+                {"type": "input_image", "image_url":  f"data:{photo_base64['mime']};base64,{photo_base64['data']}"}
+            ]
+
+        try:
+            vision_prompt = self.config.prompts.vision
+            vision_request = [{"role": "user", "content": vision_content}]
+            args = ['memory',
+                    self.config.memory_model,
+                    vision_request,
+                    self.config.memory_tokens_per_answer, vision_prompt,
+                    self.config.memory_temperature,
+                    self.config.memory_stream_mode,
+                    self.config.memory_attempts]
+            answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
+                None, self.send_api_request, *args)
+            if self.config.full_debug:
+                logging.info(f"--FULL DEBUG INFO FOR VISION REQUEST--\n\n{vision_prompt}\n\n{vision_request}"
+                             f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR VISION REQUEST--")
+            logging.info(f"Vision spent {total_tokens} tokens")
+            return f"Vision: {answer}\n"
+        except ApiRequestException:
+            logging.error("Vision LLM could not process the request")
+            return f"Vision: The image was not recognized due to censorship or an LLM failure.\n"
+
     async def get_answer(self, message, reply_msg: Optional[dict], photo_base64):
         username = utils.username_parser(message)
         chat_name = f"Private messages" if message.chat.title is None else f'chat {message.chat.title}'
@@ -270,7 +303,13 @@ class Dialog:
                 ]):
             current_time = f"{utils.current_time_info(self.config)}\n"
             logging.info(f"Time updated for dialogue in {chat_name}")
-        prompt = f'{current_time}{memory_result}{reply_msg_text}{main_text}'
+
+        vision_description = ""
+        if self.config.vision == "memory-mode" and photo_base64:
+            vision_description = await self.get_image_description(photo_base64)
+            photo_base64 = None
+
+        prompt = f'{current_time}{memory_result}{vision_description}{reply_msg_text}{main_text}'
         prefill_ass = None
         if self.config.prompts.prefill:
             if self.config.prefill_mode == 'assistant':
@@ -315,14 +354,14 @@ class Dialog:
             summarizer_used = True
             await self.dialogue_locker.acquire()
             self.dialogue_locker.release()
-        prompt = f'{current_time}{reply_msg_text}{main_text}'
+        prompt = f'{current_time}{vision_description}{reply_msg_text}{main_text}'
         if photo_base64:
             self.dialog_history.extend([{"role": "user", "content": self.get_image_context(photo_base64, prompt)},
                                         {"role": "assistant", "content": answer}])
         else:
             self.dialog_history.extend([{"role": "user", "content": prompt},
                                         {"role": "assistant", "content": answer}])
-        if self.config.vision and len(self.dialog_history) > 10:
+        if self.config.vision == "enabled" and len(self.dialog_history) > 10:
             self.dialog_history = self.cleaning_images(self.dialog_history, last_only=True)
         if total_tokens >= self.config.summarizer_limit and not summarizer_used:
             logging.info(f"The token limit {self.config.summarizer_limit} for "

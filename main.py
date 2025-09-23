@@ -54,7 +54,7 @@ async def chatgpt(message: types.Message):
     if not await utils.check_whitelist(message, config):
         return
 
-    if not any([message.text, message.caption, config.vision]):
+    if not any([message.text, message.caption, config.vision != "disabled"]):
         return
 
     if message.quote and not config.reply_to_quotes:
@@ -62,7 +62,7 @@ async def chatgpt(message: types.Message):
 
     photo_base64 = None
     try:
-        if config.vision:
+        if config.vision != "disabled":
             photo_base64 = (await utils.get_image_from_message(message, bot) or
                             await utils.get_image_from_message(message.reply_to_message, bot))
     except Exception as e:
@@ -125,7 +125,7 @@ async def main():
     get_me = await bot.get_me()
     config.my_id = get_me.id
     config.my_username = f"@{get_me.username}"
-    logging.info("###HUMANOTRONIC v4.10.13 (Memory Reboot) LAUNCHED SUCCESSFULLY###")
+    logging.info("###HUMANOTRONIC v4.11 (Memory Reboot) LAUNCHED SUCCESSFULLY###")
     await dp.start_polling(bot)
 
 
