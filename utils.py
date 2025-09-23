@@ -299,21 +299,21 @@ def check_names(message, config) -> Union[None, str]:
 
 
 def username_parser(message, html=False):
+
     if message.from_user.first_name == "":
         return "DELETED USER"
 
     if message.from_user.username == "GroupAnonymousBot":
         return "ANONYMOUS ADMIN"
 
-    if message.from_user.last_name is None:
-        username = str(message.from_user.first_name)
-    else:
-        username = str(message.from_user.first_name) + " " + str(message.from_user.last_name)
+    last_name = f" {message.from_user.last_name}" if message.from_user.last_name else ""
+    username = f" ({message.from_user.username})" if message.from_user.username else ""
+    compiled_name = f"{message.from_user.first_name}{last_name}{username}"
 
     if not html:
-        return username
+        return compiled_name
 
-    return html_fix(username)
+    return html_fix(compiled_name)
 
 
 def html_fix(text):

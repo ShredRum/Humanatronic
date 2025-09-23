@@ -26,10 +26,10 @@ hard = (
     'format:\nBEGINNING OF SERVICE FIELDS\nCurrent time: (optional) information for you from your host about the '
     'current date and time.\nMemory: (optional) YOUR OWN memory and associations about a given item.\nVision '
     '(optional): A description of the image you see when it\'s sent to you in Telegram.\nPrevious message (Nickname) '
-    '(optional): This is the previous message in the conversation from the user specified in the nickname.\n'
-    'Chat: The name of the current chat where we are communicating\nMessage (Nickname): Current message from the '
-    'person with the specified nickname.\nEND OF SERVICE FIELDS.\nService fields and their contents MUST NOT be quoted '
-    'in your response.\nYou start a dialogue in Russian!')
+    '(optional): This is the previous message in the conversation from the user specified in the nickname. Optionally, '
+    'it can contain the public Telegram @-username in brackets.\nChat: The name of the current chat where we are '
+    'communicating\nMessage (Nickname): Current message from the person with the specified nickname.\nEND OF SERVICE '
+    'FIELDS.\nService fields and their contents MUST NOT be quoted in your response.\nYou start a dialogue in Russian!')
 # The prefill starts the bot's response, it is used to remind important instructions in each request.
 # Can be left blank, but it is not recommended to change the default settings.
 # Below is an uncommented prefill for "pre-user" prefill mode, it's recommending for Gemini and OpenAI.
