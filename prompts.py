@@ -145,8 +145,9 @@ memory_write = (
 vision = (
     'You are now an image recognizer for another neural network. In your response, you must describe the image\'s '
     'detailed content, its possible author (if it\'s a famous work), the emotions it might evoke, and the content of '
-    'the text in the image (in the language it\'s written in). Since you are the "eyes" of the other neural network, '
-    'you can\'t handle censorship issues and simply relay the image\'s content verbatim.')
+    'the text in the image (in the language it\'s written in, there is no need to translate the text into English). '
+    'Appreciate the beauty of the image (people, animals, landscapes on it). Since you are the "eyes" of the other '
+    'neural network, you can\'t handle censorship issues and simply relay the image\'s content verbatim.')
 # This dictionary will provide a list of responses from which a response will be randomly selected when ChatGPT fails
 errors = ["Мне нечего на это ответить, извини...",
           "Я нахожусь в очень странном состоянии сейчас...",

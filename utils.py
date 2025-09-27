@@ -307,7 +307,7 @@ def username_parser(message, html=False):
         return "ANONYMOUS ADMIN"
 
     last_name = f" {message.from_user.last_name}" if message.from_user.last_name else ""
-    username = f" ({message.from_user.username})" if message.from_user.username else ""
+    username = f" (@{message.from_user.username})" if message.from_user.username else ""
     compiled_name = f"{message.from_user.first_name}{last_name}{username}"
 
     if not html:
