@@ -4,3 +4,4 @@ tiktoken>=0.8.0
 Pillow>=11.1.0
 anthropic>=0.45.2
 html2text>=2024.2.26
+google-genai>=1.39.1
