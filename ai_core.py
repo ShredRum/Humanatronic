@@ -9,8 +9,29 @@ from typing import Optional
 import anthropic
 import openai
 import html2text
+from google import genai
 
 import utils
+
+
+SAFETY_SETTINGS = [
+    genai.types.SafetySetting(
+        category=genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold=genai.types.HarmBlockThreshold.BLOCK_NONE,
+    ),
+    genai.types.SafetySetting(
+        category=genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold=genai.types.HarmBlockThreshold.BLOCK_NONE,
+    ),
+    genai.types.SafetySetting(
+        category=genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold=genai.types.HarmBlockThreshold.BLOCK_NONE,
+    ),
+    genai.types.SafetySetting(
+        category=genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold=genai.types.HarmBlockThreshold.BLOCK_NONE,
+    )
+]
 
 
 class ApiRequestException(Exception):
@@ -26,11 +47,6 @@ class Dialog:
         self.context = context
         self.last_time = 0
         self.memory_dump = None
-
-        def get_client(vendor, api_key, base_url):
-            if vendor == 'anthropic':
-                return anthropic.Anthropic(api_key=api_key, base_url=base_url)
-            return openai.OpenAI(api_key=api_key, base_url=base_url)
 
         try:
             dialog_data = sql_helper.dialog_get(context)
@@ -51,8 +67,16 @@ class Dialog:
             if config.vision != "enabled":
                 self.dialog_history = self.cleaning_images(self.dialog_history)
         self.system = f"{config.prompts.start}\n{config.prompts.hard}\n{start_time}"
-        self.client = get_client(config.model_vendor, config.api_key, config.base_url)
-        self.memory_client = get_client(config.memory_model_vendor, config.memory_api_key, config.memory_base_url)
+        self.client = self.get_client(config.model_vendor, config.api_key, config.base_url)
+        self.memory_client = self.get_client(config.memory_model_vendor, config.memory_api_key, config.memory_base_url)
+
+    @staticmethod
+    def get_client(vendor, api_key, base_url):
+        if vendor == 'anthropic':
+            return anthropic.Anthropic(api_key=api_key, base_url=base_url)
+        elif vendor == 'google':
+            return genai.Client(api_key=api_key, http_options=genai.types.HttpOptions(base_url=base_url))
+        return openai.OpenAI(api_key=api_key, base_url=base_url)
 
     @staticmethod
     def html_parser(exc_text):
@@ -96,6 +120,68 @@ class Dialog:
                 return answer, total_tokens
             except Exception as e:
                 logging.error(f"OPENAI API REQUEST ERROR!\n{self.html_parser(e)}")
+                if self.config.full_debug:
+                    logging.error(traceback.format_exc())
+                    logging.error(completion)
+
+        queue.release()
+        raise ApiRequestException
+
+    def send_api_request_gemini(self, client: genai.client.Client, queue, model, messages,
+                                max_tokens=1000,
+                                system=None,
+                                temperature=None,
+                                stream=False,
+                                attempts=3):
+
+        generation_config = genai.types.GenerateContentConfig(
+            safety_settings=SAFETY_SETTINGS,
+            max_output_tokens=max_tokens,
+        )
+        if temperature:
+            generation_config.temperature = temperature
+        if system:
+            generation_config.system_instruction = system
+
+        gemini_history = []
+        for message in messages:
+            role = message['role']
+            if role == 'assistant':
+                gemini_history.append(genai.types.Content(role='model',
+                                                          parts=[(genai.types.Part(text=message['content']))]))
+            elif isinstance(message['content'], list):
+                parts = []
+                for content_part in message['content']:
+                    if content_part['type'] == 'input_text':
+                        parts.append(genai.types.Part(text=content_part['text']))
+                    elif content_part['type'] == 'input_image':
+                        mime_type, base64_str = content_part['image_url'].split(";base64,")
+                        mime_type = mime_type.split(":")[1]
+                        parts.append(genai.types.Part.from_bytes(data=base64_str, mime_type=mime_type))
+                gemini_history.append(genai.types.Content(role='user', parts=parts))
+            else:
+                gemini_history.append(genai.types.Content(role='user',
+                                                          parts=[genai.types.Part(text=message['content'])]))
+
+        queue.acquire()
+        for _ in range(attempts):
+            completion = 'The "completion" object was not received.'
+            try:
+                completion = client.models.generate_content(
+                    model=model,
+                    contents=gemini_history,
+                    config=generation_config
+                )
+                if not completion.usage_metadata:
+                    raise ApiRequestException(completion.text)
+                prompt_tokens = completion.usage_metadata.prompt_token_count
+                completion_tokens = completion.usage_metadata.candidates_token_count
+                if not (prompt_tokens and completion_tokens):
+                    raise ApiRequestException(completion.text)
+                queue.release()
+                return completion.text, prompt_tokens + completion_tokens
+            except Exception as e:
+                logging.error(f"GOOGLE API REQUEST ERROR!\n{self.html_parser(e)}")
                 if self.config.full_debug:
                     logging.error(traceback.format_exc())
                     logging.error(completion)
@@ -197,6 +283,8 @@ class Dialog:
             queue = self.config.api_queue
         if vendor == 'anthropic':
             return self.send_api_request_claude(client, queue, *args)
+        elif vendor == 'google':
+            return self.send_api_request_gemini(client, queue, *args)
         return self.send_api_request_openai(client, queue, *args)
 
     def get_image_context(self, photo_base64, prompt):

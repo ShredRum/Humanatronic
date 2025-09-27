@@ -105,12 +105,12 @@ class ConfigData:
                 self.memory_stream_mode = self.bool_init(config["Memory"]["stream-mode"])
                 self.memory_attempts = int(config["Memory"]["gen-attempts"])
                 memory_queue_size = int(config["Memory"]["queue-size"])
-                if self.model_vendor not in ("openai", "anthropic"):
-                    raise KeyError('The model vendor must be "openai" or "anthropic"')
+                if self.model_vendor not in ("openai", "anthropic", "google"):
+                    raise KeyError('The model vendor must be "openai", "anthropic" or "google"')
                 if self.summarizer_engine not in ('personality', 'memory'):
                     raise KeyError('The "summarizer-engine" parameter value can only be "personality" or "memory"')
-                if self.memory_model_vendor not in ("openai", "anthropic"):
-                    raise KeyError('The "memory" model vendor must be "openai" or "anthropic"')
+                if self.memory_model_vendor not in ("openai", "anthropic", "google"):
+                    raise KeyError('The "memory" model vendor must be "openai", "anthropic" or "google"')
                 if self.prefill_mode not in ('assistant', 'pre-user', 'post-user', 'disabled'):
                     raise KeyError('The "prefill-mode" parameter value can only be '
                                    '"assistant", "pre-user", "post-user" or "disabled"')
@@ -195,7 +195,12 @@ class ConfigData:
             api_key = input("Please, write your API key: ")
         while model == "":
             model = input("Please, write your model name: ")
-        model_vendor = "anthropic" if "claude" in model else "openai"
+        if "claude" in model:
+            model_vendor = "anthropic"
+        elif "gemini" in model:
+            model_vendor = "google"
+        else:
+            model_vendor = "openai"
 
         memory_api_key = input('Please, write your API key for memory model '
                                'or leave blank to use values from the main model: ') or api_key
