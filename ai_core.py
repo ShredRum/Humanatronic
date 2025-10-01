@@ -4,7 +4,8 @@ import random
 import asyncio
 import time
 import traceback
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Any
 
 import anthropic
 import openai
@@ -34,8 +35,22 @@ SAFETY_SETTINGS = [
 ]
 
 
+GENERATION_TIMEOUT = 180
+
+
 class ApiRequestException(Exception):
     pass
+
+
+@dataclass
+class ApiRequestTemplate:
+    model: str
+    messages: list
+    max_tokens: int = 1000
+    system: Optional[str] = None
+    temperature: Optional[float] = None
+    stream: bool = False
+    attempts: int = 3
 
 
 class Dialog:
@@ -88,29 +103,24 @@ class Dialog:
         text_converter.ignore_links = True
         return text_converter.handle(exc_text)
 
-    def send_api_request_openai(self, client: openai.OpenAI, queue, model, messages,
-                                max_tokens=1000,
-                                system=None,
-                                temperature=None,
-                                stream=False,
-                                attempts=3):
+    def send_api_request_openai(self, client: openai.OpenAI, queue, request_args: ApiRequestTemplate):
 
-        if system:
-            system = [{"role": "system", "content": system}]
-            system.extend(messages)
-            messages = system
+        if request_args.system:
+            messages = [{"role": "system", "content": request_args.system}] + request_args.messages
+        else:
+            messages = request_args.messages
 
         queue.acquire()
-        for _ in range(attempts):
+        for _ in range(request_args.attempts):
             completion = 'The "completion" object was not received.'
             try:
                 completion = client.chat.completions.create(
-                    model=model,
+                    model=request_args.model,
                     messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
+                    temperature=request_args.temperature,
+                    max_tokens=request_args.max_tokens,
                     stream=False,
-                    timeout=180
+                    timeout=GENERATION_TIMEOUT
                 )
                 answer = completion.choices[0].message.content
                 total_tokens = completion.usage.total_tokens
@@ -127,24 +137,19 @@ class Dialog:
         queue.release()
         raise ApiRequestException
 
-    def send_api_request_gemini(self, client: genai.client.Client, queue, model, messages,
-                                max_tokens=1000,
-                                system=None,
-                                temperature=None,
-                                stream=False,
-                                attempts=3):
+    def send_api_request_gemini(self, client: genai.client.Client, queue, request_args: ApiRequestTemplate):
 
         generation_config = genai.types.GenerateContentConfig(
             safety_settings=SAFETY_SETTINGS,
-            max_output_tokens=max_tokens,
+            max_output_tokens=request_args.max_tokens
         )
-        if temperature:
-            generation_config.temperature = temperature
-        if system:
-            generation_config.system_instruction = system
+        if request_args.temperature:
+            generation_config.temperature = request_args.temperature
+        if request_args.system:
+            generation_config.system_instruction = request_args.system
 
         gemini_history = []
-        for message in messages:
+        for message in request_args.messages:
             role = message['role']
             if role == 'assistant':
                 gemini_history.append(genai.types.Content(role='model',
@@ -164,11 +169,11 @@ class Dialog:
                                                           parts=[genai.types.Part(text=message['content'])]))
 
         queue.acquire()
-        for _ in range(attempts):
+        for _ in range(request_args.attempts):
             completion = 'The "completion" object was not received.'
             try:
                 completion = client.models.generate_content(
-                    model=model,
+                    model=request_args.model,
                     contents=gemini_history,
                     config=generation_config
                 )
@@ -189,27 +194,23 @@ class Dialog:
         queue.release()
         raise ApiRequestException
 
-    def send_api_request_claude(self, client: anthropic.Anthropic, queue, model, messages,
-                                max_tokens=1000,
-                                system=None,
-                                temperature=None,
-                                stream=False,
-                                attempts=3):
+    def send_api_request_claude(self, client: anthropic.Anthropic, queue, request_args: ApiRequestTemplate):
 
-        kwargs = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "timeout": 180
+        kwargs: dict[str, Any] = {
+            "model": request_args.model,
+            "messages": request_args.messages,
+            "max_tokens": request_args.max_tokens,
+            "timeout": GENERATION_TIMEOUT
         }
-        if system:
-            kwargs.update({'system': system})
-        if not stream:
+        if request_args.system:
+            kwargs.update({'system': request_args.system})
+        if request_args.temperature:
+            kwargs.update({'temperature': request_args.temperature})
+        if not request_args.stream:
             kwargs.update({'stream': False})
 
         queue.acquire()
-        for _ in range(attempts):
+        for _ in range(request_args.attempts):
             completion = 'The "completion" object was not received.'
             if not stream:
                 try:
@@ -270,7 +271,7 @@ class Dialog:
         queue.release()
         raise ApiRequestException
 
-    def send_api_request(self, mode, *args):
+    def send_api_request(self, mode: str, request_args: ApiRequestTemplate):
         if mode not in ('personality', 'memory'):
             logging.error('The mode of use should be "personality" or "memory"')
             raise ApiRequestException
@@ -282,10 +283,10 @@ class Dialog:
             client = self.client
             queue = self.config.api_queue
         if vendor == 'anthropic':
-            return self.send_api_request_claude(client, queue, *args)
+            return self.send_api_request_claude(client, queue, request_args)
         elif vendor == 'google':
-            return self.send_api_request_gemini(client, queue, *args)
-        return self.send_api_request_openai(client, queue, *args)
+            return self.send_api_request_gemini(client, queue, request_args)
+        return self.send_api_request_openai(client, queue, request_args)
 
     def get_image_context(self, photo_base64, prompt):
         if self.config.model_vendor == 'anthropic':
@@ -314,15 +315,17 @@ class Dialog:
         try:
             vision_prompt = self.config.prompts.vision
             vision_request = [{"role": "user", "content": vision_content}]
-            args = ['memory',
-                    self.config.memory_model,
-                    vision_request,
-                    self.config.memory_tokens_per_answer, vision_prompt,
-                    self.config.memory_temperature,
-                    self.config.memory_stream_mode,
-                    self.config.memory_attempts]
+            request_args = ApiRequestTemplate(
+                model=self.config.memory_model,
+                messages=vision_request,
+                max_tokens=self.config.memory_tokens_per_answer,
+                system=vision_prompt,
+                temperature=self.config.memory_temperature,
+                stream=self.config.memory_stream_mode,
+                attempts=self.config.memory_attempts
+            )
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                None, self.send_api_request, *args)
+                None, self.send_api_request, 'memory', request_args)
             if self.config.full_debug:
                 logging.info(f"--FULL DEBUG INFO FOR VISION REQUEST--\n\n{vision_prompt}\n\n{vision_request}"
                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR VISION REQUEST--")
@@ -365,15 +368,17 @@ class Dialog:
             try:
                 sys_mem_prompt = f'{self.config.prompts.memory_read}\n{self.memory_dump}'
                 mem_request = [{"role": "user", "content": request_to_memory}]
-                args = ['memory',
-                        self.config.memory_model,
-                        mem_request,
-                        self.config.memory_tokens_per_answer, sys_mem_prompt,
-                        self.config.memory_temperature,
-                        self.config.memory_stream_mode,
-                        self.config.memory_attempts]
+                request_args = ApiRequestTemplate(
+                    model=self.config.memory_model,
+                    messages=mem_request,
+                    max_tokens=self.config.memory_tokens_per_answer,
+                    system=sys_mem_prompt,
+                    temperature=self.config.memory_temperature,
+                    stream=self.config.memory_stream_mode,
+                    attempts=self.config.memory_attempts
+                )
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                    None, self.send_api_request, *args)
+                    None, self.send_api_request, 'memory', request_args)
                 if self.config.full_debug:
                     logging.info(f"--FULL DEBUG INFO FOR MEMORY REQUEST--\n\n{sys_mem_prompt}\n\n{mem_request}"
                                  f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR MEMORY REQUEST--")
@@ -421,15 +426,17 @@ class Dialog:
             self.dialogue_locker.release()
 
         try:
-            args = ['personality',
-                    self.config.model,
-                    dialog_buffer,
-                    self.config.tokens_per_answer, self.system,
-                    self.config.temperature,
-                    self.config.stream_mode,
-                    self.config.attempts]
+            request_args = ApiRequestTemplate(
+                model=self.config.model,
+                messages=dialog_buffer,
+                max_tokens=self.config.tokens_per_answer,
+                system=self.system,
+                temperature=self.config.temperature,
+                stream=self.config.stream_mode,
+                attempts=self.config.attempts
+            )
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                None, self.send_api_request, *args)
+                None, self.send_api_request, 'personality', request_args)
             if self.config.full_debug:
                 logging.info(f"--FULL DEBUG INFO FOR API REQUEST--\n\n{self.system}\n\n{dialog_buffer}"
                              f"\n\n{answer}\n\n--END OF FULL DEBUG INFO FOR API REQUEST--")
@@ -529,17 +536,19 @@ class Dialog:
             attempts = self.config.attempts
 
         try:
-            args = [mode,
-                    model,
-                    compressed_dialogue,
-                    tokens_per_answer, None,
-                    temperature,
-                    stream_mode,
-                    attempts]
+            request_args = ApiRequestTemplate(
+                model=model,
+                messages=compressed_dialogue,
+                max_tokens=tokens_per_answer,
+                system=None,
+                temperature=temperature,
+                stream=stream_mode,
+                attempts=attempts
+            )
             compressed_dialogue_result = ''
             compress_tokens_counter = 0
             answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                None, self.send_api_request, *args)
+                None, self.send_api_request, mode, request_args)
             logging.info(f'Compressing, iteration 1 completed, used {total_tokens} tokens...')
             if self.config.full_debug:
                 logging.info("--FULL DEBUG INFO FOR DIALOG COMPRESSING, ITERATION 1--\n\n"
@@ -557,7 +566,7 @@ class Dialog:
                                                 'Write "42_info_sum_complete" at the end when you finish.'}
                 ])
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                    None, self.send_api_request, *args)
+                    None, self.send_api_request, mode, request_args)
                 logging.info(f'Compressing, iteration {compress_iter + 2} completed, used {total_tokens} tokens...')
                 if self.config.full_debug:
                     logging.info(f"--FULL DEBUG INFO FOR DIALOG COMPRESSING, ITERATION {compress_iter + 2}--\n\n"
@@ -584,15 +593,17 @@ class Dialog:
                                f'Then combine the information from the old and '
                                'new JSON and write 42_info_sum_complete when you\'re done.'
                 }]
-                args = [mode,
-                        model,
-                        merge_request,
-                        tokens_per_answer, None,
-                        temperature,
-                        stream_mode,
-                        attempts]
+                request_args = ApiRequestTemplate(
+                    model=model,
+                    messages=merge_request,
+                    max_tokens=tokens_per_answer,
+                    system=None,
+                    temperature=temperature,
+                    stream=stream_mode,
+                    attempts=attempts
+                )
                 answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                    None, self.send_api_request, *args)
+                    None, self.send_api_request, mode, request_args)
                 logging.info(f'Merging, iteration 1 completed, used {total_tokens} tokens...')
                 if self.config.full_debug:
                     logging.info("--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION 1--\n\n"
@@ -609,7 +620,7 @@ class Dialog:
                                                     'that was already included in your previous uncompleted answer. '
                                                     'Write "42_info_sum_complete" at the end when you finish.'}])
                     answer, total_tokens = await asyncio.get_running_loop().run_in_executor(
-                        None, self.send_api_request, *args)
+                        None, self.send_api_request, mode, request_args)
                     logging.info(f'Merging, iteration {merge_iter + 2} completed, used {total_tokens} tokens...')
                     if self.config.full_debug:
                         logging.info(f"--FULL DEBUG INFO FOR MEMORY MERGING, ITERATION {merge_iter + 2}--\n\n"
