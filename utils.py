@@ -417,9 +417,10 @@ def get_poll_text(message):
     if not message.poll:
         return None
     poll_text = message.poll.question + "\n\n"
+    options = "\n".join([f'☑️ {option.text}' for option in message.poll.options])
     for option in message.poll.options:
         poll_text += "☑️ " + option.text + "\n"
-    return poll_text
+    return poll_text + options
 
 
 async def send_message(message, bot, text: str, markdown_filter=None, parse_mode=None, reply=False):

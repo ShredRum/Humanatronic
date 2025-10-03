@@ -301,20 +301,11 @@ class Dialog:
             ]
 
     async def get_image_description(self, photo_base64):
-        if self.config.model_vendor == 'anthropic':
-            vision_content = [
-                {"type": "image", "source":
-                    {"type": "base64", "media_type": photo_base64['mime'], "data": photo_base64['data']}},
-                {"type": "text", "text": "Describe this image"}]
-        else:
-            vision_content = [
-                {"type": "input_text", "text": "Describe this image"},
-                {"type": "input_image", "image_url":  f"data:{photo_base64['mime']};base64,{photo_base64['data']}"}
-            ]
-
+        vision_prompt = self.config.prompts.vision
+        vision_request = [
+            {"role": "user", "content": self.get_image_context(photo_base64, "Describe this image")}
+        ]
         try:
-            vision_prompt = self.config.prompts.vision
-            vision_request = [{"role": "user", "content": vision_content}]
             request_args = ApiRequestTemplate(
                 model=self.config.memory_model,
                 messages=vision_request,
@@ -350,7 +341,7 @@ class Dialog:
             msg_txt, reply_msg_text, chat_name, username = map(utils.unicode_filter,
                                                                (msg_txt, reply_msg_text, chat_name, username))
 
-        main_text = f"Chat: {chat_name}\nMessage ({username}): {msg_txt}"
+        main_text = f"Chat: {chat_name}\nMessage ({username}) (ID {message.from_user.id}): {msg_txt}"
 
         dialog_buffer = self.dialog_history.copy()
         summarizer_used = False

@@ -1,5 +1,12 @@
 # Humanotronic
 ChatGPT-based bot code that imitates a personality, knows the current date and time and the names of those who write to it, remembers events in permanent memory.
+# Privacy Policy
+Absolutely no information is transmitted to the source code authors when using this software. However, during the software's operation, the owners of the proxy and/or the hosts of the used LLM will receive the following data:
+1. Telegram user ID.
+2. Telegram nickname (which always includes the first name, as well as the last name and public @-username, if they are provided).
+3. The full text content of the conversation conducted through this software.
+
+If you do not agree to these terms, **please don't use this software**.
 # Main features of the bot
 * OpenAI and Anthropic API support out of the box (Gemini is planned, if necessary, we can provide an HTML wrapper that converts OpenAI requests to Gemini)
 * Transferring the current date and time to the bot at a certain frequency
